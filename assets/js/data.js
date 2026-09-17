@@ -1,0 +1,153 @@
+/* =====================================================================
+   Data layer. Uses Supabase when CONFIG has credentials, otherwise the
+   browser's own storage so the whole site still works offline / in demo.
+   ===================================================================== */
+let sb = null;
+if (CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY && window.supabase) {
+  try { sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY); }
+  catch (e) { console.warn('Supabase init failed — demo mode', e); }
+}
+const ONLINE = () => !!sb;
+
+const DB = {
+  async list(table, seed, order) {
+    if (ONLINE()) {
+      const { data, error } = await sb.from(table).select('*').order(order || 'created_at', { ascending: false });
+      if (error) { console.warn(table, error.message); return LS.get(table, seed || []); }
+      if (data && data.length) return data;
+      return seed || [];
+    }
+    return LS.get(table, seed || []);
+  },
+  async save(table, row) {
+    if (ONLINE()) {
+      const { data, error } = await sb.from(table).upsert(row).select();
+      if (error) throw error;
+      return (data && data[0]) || row;
+    }
+    const rows = LS.get(table, []);
+    const i = rows.findIndex(r => r.id === row.id);
+    if (i > -1) rows[i] = { ...rows[i], ...row }; else rows.unshift(row);
+    LS.set(table, rows);
+    return row;
+  },
+  async remove(table, id) {
+    if (ONLINE()) { const { error } = await sb.from(table).delete().eq('id', id); if (error) throw error; return; }
+    LS.set(table, LS.get(table, []).filter(r => r.id !== id));
+  },
+  async findBy(table, col, val) {
+    if (ONLINE()) {
+      const { data } = await sb.from(table).select('*').eq(col, val).limit(1);
+      return data && data[0];
+    }
+    return LS.get(table, []).find(r => r[col] === val);
+  },
+  async upload(file) {
+    const name = Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.\-_]/g, '');
+    if (ONLINE()) {
+      const { error } = await sb.storage.from(CONFIG.STORAGE_BUCKET).upload(name, file, { cacheControl: '3600' });
+      if (error) throw error;
+      return sb.storage.from(CONFIG.STORAGE_BUCKET).getPublicUrl(name).data.publicUrl;
+    }
+    return await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+  }
+};
+
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id' + Date.now() + Math.random().toString(16).slice(2));
+const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || ('item' + Date.now());
+
+/* Keeps one row per mobile number, so the same traveller is never
+   duplicated no matter how many quotes they ask for.                */
+async function upsertCustomer({ name, phone, email, city, source, lang, consent }) {
+  const key = waNumber(phone);
+  const existing = await DB.findBy('customers', 'phone_key', key);
+  const row = existing
+    ? { ...existing, name: name || existing.name, email: email || existing.email, city: city || existing.city,
+        quotes: (existing.quotes || 0) + 1, last_seen: new Date().toISOString(),
+        consent: consent === undefined ? existing.consent : consent }
+    : { id: uid(), created_at: new Date().toISOString(), last_seen: new Date().toISOString(),
+        name: name || 'Unknown', phone, phone_key: key, email: email || null, city: city || null,
+        source: source || 'website', lang: lang || 'en', consent: consent !== false,
+        quotes: 1, bookings: 0, spent_bdt: 0, tags: [], notes: null };
+  await DB.save('customers', row);
+  return row;
+}
+
+/* Document numbers: QT-2026-0007, INV-2026-0007 */
+async function nextNumber(table, prefix) {
+  const rows = await DB.list(table, []);
+  const year = new Date().getFullYear();
+  const n = rows.filter(r => String(r.doc_no || '').includes('-' + year + '-')).length + 1;
+  return `${prefix}-${year}-${String(n).padStart(4, '0')}`;
+}
+
+/* ---------------------------------------------------------------- seeds */
+const SEED_PACKAGES = [
+  { id: 'coxsbazar', cat: 'domestic', title_en: "Cox's Bazar and Marine Drive", title_bn: 'কক্সবাজার ও মেরিন ড্রাইভ',
+    sum_en: 'Longest beach in the world, with an open-jeep run down Marine Drive to Inani and Himchari.',
+    sum_bn: 'পৃথিবীর দীর্ঘতম সৈকত, সঙ্গে মেরিন ড্রাইভ ধরে ইনানী ও হিমছড়ি ভ্রমণ।',
+    nights: 3, base: 2500, flight: 8500, from: 14500, rating: 4.9, img: '', hue: 198,
+    inc_en: ['Beachfront hotel', 'Inani and Himchari day trip', 'Daily breakfast'],
+    inc_bn: ['সৈকতের পাশে হোটেল', 'ইনানী ও হিমছড়ি ভ্রমণ', 'প্রতিদিন সকালের নাস্তা'] },
+  { id: 'sundarbans', cat: 'domestic', title_en: 'Sundarbans launch expedition', title_bn: 'সুন্দরবন লঞ্চ ভ্রমণ',
+    sum_en: 'Three days aboard a cabin launch through Karamjal, Kotka and Jamtola, guided by a forest ranger.',
+    sum_bn: 'কেবিন লঞ্চে তিন দিন — করমজল, কটকা ও জামতলা, সঙ্গে বনরক্ষী গাইড।',
+    nights: 2, base: 3400, flight: 3500, from: 12900, rating: 4.8, img: '', hue: 150,
+    inc_en: ['All meals on board', 'Forest permits and guard', 'Kotka watchtower walk'],
+    inc_bn: ['লঞ্চে সব বেলার খাবার', 'বন বিভাগের অনুমতি ও গার্ড', 'কটকা ওয়াচটাওয়ার হাঁটা'] },
+  { id: 'sylhet', cat: 'domestic', title_en: 'Sylhet, Sreemangal and Jaflong', title_bn: 'সিলেট, শ্রীমঙ্গল ও জাফলং',
+    sum_en: 'Tea gardens, Ratargul swamp forest and the stone rivers along the Meghalaya border.',
+    sum_bn: 'চা বাগান, রাতারগুল জলাবন আর মেঘালয় সীমান্তের পাথুরে নদী।',
+    nights: 3, base: 2000, flight: 5000, from: 9900, rating: 4.7, img: '', hue: 120,
+    inc_en: ['Ratargul boat ride', 'Tea estate walk', 'Jaflong and Bisnakandi'],
+    inc_bn: ['রাতারগুলে নৌকা ভ্রমণ', 'চা বাগানে হাঁটা', 'জাফলং ও বিছনাকান্দি'] },
+  { id: 'bandarban', cat: 'domestic', title_en: 'Bandarban hills and Nafakhum', title_bn: 'বান্দরবান পাহাড় ও নাফাখুম',
+    sum_en: 'Nilgiri sunrise, Sangu river trek and the waterfall at Nafakhum with local Marma guides.',
+    sum_bn: 'নীলগিরির সূর্যোদয়, সাঙ্গু নদীর ট্রেক আর মারমা গাইডসহ নাফাখুম জলপ্রপাত।',
+    nights: 3, base: 2200, flight: 4200, from: 11500, rating: 4.8, img: '', hue: 172,
+    inc_en: ['Chander Gari hill transport', 'Guide and permits', 'Tribal home stay night'],
+    inc_bn: ['চান্দের গাড়িতে পাহাড় ভ্রমণ', 'গাইড ও প্রয়োজনীয় অনুমতি', 'আদিবাসী বাড়িতে এক রাত'] },
+  { id: 'saintmartin', cat: 'domestic', title_en: "Saint Martin's island stay", title_bn: 'সেন্ট মার্টিন দ্বীপ ভ্রমণ',
+    sum_en: 'Ship from Teknaf, a night on the Chera Dwip side of the island and all the coral you can walk to.',
+    sum_bn: 'টেকনাফ থেকে জাহাজ, ছেঁড়া দ্বীপের পাশে রাত্রিযাপন আর হেঁটে দেখা প্রবাল।',
+    nights: 2, base: 2800, flight: 9000, from: 13800, rating: 4.6, img: '', hue: 186,
+    inc_en: ['Return ship tickets', 'Beach resort room', 'Chera Dwip boat'],
+    inc_bn: ['যাওয়া-আসার জাহাজ টিকিট', 'সৈকত রিসোর্টে রুম', 'ছেঁড়া দ্বীপে নৌকা'] },
+  { id: 'malaysia', cat: 'international', title_en: 'Kuala Lumpur and Genting', title_bn: 'কুয়ালালামপুর ও গেনটিং',
+    sum_en: 'Twin Towers, Batu Caves and the cable car up to Genting Highlands, flights from Dhaka included.',
+    sum_bn: 'টুইন টাওয়ার, বাটু কেভস আর গেনটিং হাইল্যান্ডের ক্যাবল কার — ঢাকা থেকে ফ্লাইটসহ।',
+    nights: 4, base: 5500, flight: 32000, from: 48000, rating: 4.8, img: '', hue: 210,
+    inc_en: ['Return air ticket', 'Genting cable car pass', 'City tour with guide'],
+    inc_bn: ['যাওয়া-আসার এয়ার টিকিট', 'গেনটিং ক্যাবল কার পাস', 'গাইডসহ সিটি ট্যুর'] },
+  { id: 'thailand', cat: 'international', title_en: 'Bangkok and Pattaya', title_bn: 'ব্যাংকক ও পাতায়া',
+    sum_en: 'Coral island speedboat, floating market morning and two nights each in the city and on the coast.',
+    sum_bn: 'কোরাল আইল্যান্ডে স্পিডবোট, ভাসমান বাজারের সকাল — শহরে ও সমুদ্রে দুই রাত করে।',
+    nights: 5, base: 6000, flight: 35000, from: 52000, rating: 4.7, img: '', hue: 16,
+    inc_en: ['Return air ticket', 'Coral island tour', 'Airport transfers'],
+    inc_bn: ['যাওয়া-আসার এয়ার টিকিট', 'কোরাল আইল্যান্ড ট্যুর', 'এয়ারপোর্ট ট্রান্সফার'] },
+  { id: 'nepal', cat: 'international', title_en: 'Kathmandu and Pokhara', title_bn: 'কাঠমান্ডু ও পোখারা',
+    sum_en: 'Annapurna sunrise from Sarangkot, Phewa lake boats and the old durbar squares.',
+    sum_bn: 'সারাংকোট থেকে অন্নপূর্ণার সূর্যোদয়, ফেওয়া হ্রদে নৌকা আর পুরনো দরবার স্কয়ার।',
+    nights: 4, base: 4200, flight: 26000, from: 39500, rating: 4.8, img: '', hue: 266,
+    inc_en: ['Return air ticket', 'Sarangkot sunrise drive', 'Visa on arrival support'],
+    inc_bn: ['যাওয়া-আসার এয়ার টিকিট', 'সারাংকোট সূর্যোদয় ট্রিপ', 'অন-অ্যারাইভাল ভিসা সহায়তা'] }
+];
+
+const SEED_SERVICES = [
+  { id: 's1', icon: 'ic-plane', title_en: 'Air ticketing', title_bn: 'এয়ার টিকিট', desc_en: 'Domestic and international tickets on every airline flying out of Dhaka, reissued and refunded by us.', desc_bn: 'ঢাকা থেকে ছেড়ে যাওয়া সব এয়ারলাইনের দেশি ও বিদেশি টিকিট — রিইস্যু ও রিফান্ডও আমরাই করি।' },
+  { id: 's2', icon: 'ic-passport', title_en: 'Visa processing', title_bn: 'ভিসা প্রসেসিং', desc_en: 'Document checklist, appointment booking and form filling for India, Thailand, Malaysia, UAE and Schengen.', desc_bn: 'ভারত, থাইল্যান্ড, মালয়েশিয়া, আমিরাত ও শেনজেন ভিসার কাগজপত্র, অ্যাপয়েন্টমেন্ট ও ফর্ম পূরণ।' },
+  { id: 's3', icon: 'ic-bed', title_en: 'Hotel booking', title_bn: 'হোটেল বুকিং', desc_en: 'Rooms held on our corporate rates, from beach resorts to city business hotels.', desc_bn: 'কর্পোরেট রেটে রুম বুকিং — সৈকতের রিসোর্ট থেকে শহরের বিজনেস হোটেল পর্যন্ত।' },
+  { id: 's4', icon: 'ic-shield', title_en: 'Travel insurance', title_bn: 'ট্রাভেল ইনস্যুরেন্স', desc_en: 'Medical and baggage cover accepted by embassies, issued the same day you ask.', desc_bn: 'দূতাবাস গ্রহণ করে এমন মেডিকেল ও ব্যাগেজ কভার — চাওয়ার দিনেই ইস্যু।' }
+];
+
+const SEED_GALLERY = [
+  { id: 'g1', caption_en: 'Marine Drive at low tide', caption_bn: 'ভাটার সময় মেরিন ড্রাইভ', img: '', hue: 198 },
+  { id: 'g2', caption_en: 'Tea estate, Sreemangal', caption_bn: 'চা বাগান, শ্রীমঙ্গল', img: '', hue: 120 },
+  { id: 'g3', caption_en: 'Nilgiri at dawn', caption_bn: 'ভোরের নীলগিরি', img: '', hue: 172 },
+  { id: 'g4', caption_en: 'Batu Caves steps', caption_bn: 'বাটু কেভসের সিঁড়ি', img: '', hue: 16 }
+];
+
+const REVIEWS = [
+  { n: 'Farhana Islam', c: 'Dhanmondi', en: 'They rebuilt our Cox\u2019s Bazar plan twice because my mother cannot climb stairs. The final invoice matched the quote to the taka.', bn: 'আমার মা সিঁড়ি ভাঙতে পারেন না বলে কক্সবাজারের প্ল্যান দুবার নতুন করে সাজিয়ে দিয়েছে। শেষ ইনভয়েস কোটেশনের সঙ্গে টাকায় টাকায় মিলেছে।' },
+  { n: 'Tanvir Ahmed', c: 'Chattogram', en: 'Our Malaysia visa was rejected once before. They redid the file, and the second one came through in nine days.', bn: 'আগে একবার মালয়েশিয়ার ভিসা বাতিল হয়েছিল। ওরা ফাইল নতুন করে সাজিয়ে দেয়, দ্বিতীয়বার নয় দিনেই ভিসা হয়ে যায়।' }
+];

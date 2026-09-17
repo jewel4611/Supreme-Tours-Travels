@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supreme Tours &amp; Travels — Your One Stop Travel Solution</title>
+<meta name="description" content="Custom holiday packages across Bangladesh and overseas. Build your itinerary, see a transparent price breakdown, and get a confirmed quote from Supreme Tours &amp; Travels, Dhaka.">
+<meta property="og:title" content="Supreme Tours &amp; Travels">
+<meta property="og:description" content="Tour packages inside Bangladesh and overseas, priced before you pack.">
+<meta property="og:type" content="website">
+<link rel="icon" href="assets/img/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="assets/js/tailwind.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head>
+<body class="font-sans lang-en antialiased">
+
+<!-- ========== PUBLIC SITE ========== -->
+<div id="site">
+
+  <!-- Utility bar -->
+  <div class="bg-ink text-white text-[12.5px] noprint">
+    <div class="wrap flex flex-wrap items-center justify-between gap-y-2 py-2">
+      <div class="flex items-center gap-5">
+        <a href="tel:+8801700000000" class="flex items-center gap-1.5 hover:text-sun"><svg class="i"><use href="#ic-phone"/></svg><span id="bar-phone">+880 1700-000000</span></a>
+        <a href="mailto:info@supremetours.com" class="hidden sm:flex items-center gap-1.5 hover:text-sun"><svg class="i"><use href="#ic-mail"/></svg><span id="bar-mail">info@supremetours.com</span></a>
+        <span class="hidden lg:flex items-center gap-1.5 text-white/75"><svg class="i"><use href="#ic-shield"/></svg><span data-i18n="bar.licence">Licensed travel agency · Dhaka</span></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center rounded-full bg-white/10 p-0.5" role="group" aria-label="Language">
+          <button onclick="setLang('en')" id="lng-en" class="px-3 py-1 rounded-full text-[12px] font-semibold">English</button>
+          <button onclick="setLang('bn')" id="lng-bn" class="px-3 py-1 rounded-full text-[12px] font-semibold font-bangla">বাংলা</button>
+        </div>
+        <select id="currency" onchange="setCurrency(this.value)" aria-label="Currency" class="bg-white/10 border border-white/20 rounded-full px-2.5 py-1 text-[12px] font-semibold text-white">
+          <option value="BDT" class="text-ink">BDT ৳</option>
+          <option value="USD" class="text-ink">USD $</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-[#DDE7EC] noprint">
+    <div class="wrap flex items-center justify-between h-[74px]">
+      <a href="#top" class="flex items-center gap-3">
+        <svg viewBox="0 0 400 300" class="w-12 h-9 shrink-0"><use href="#brandmark"/></svg>
+        <span class="leading-none">
+          <span class="block font-display font-extrabold text-[19px] tracking-tight text-deep">Supreme Tours &amp; Travels</span>
+          <span class="block text-[11px] font-semibold text-sea mt-1" data-i18n="brand.tag">Your one stop travel solution</span>
+        </span>
+      </a>
+      <nav class="hidden lg:flex items-center gap-7 text-[14.5px] font-semibold text-[#3A5568]">
+        <a href="#packages" class="hover:text-sea" data-i18n="nav.packages">Packages</a>
+        <a href="#planner" class="hover:text-sea" data-i18n="nav.planner">Price planner</a>
+        <a href="#services" class="hover:text-sea" data-i18n="nav.services">Services</a>
+        <a href="#gallery" class="hover:text-sea" data-i18n="nav.gallery">Gallery</a>
+        <a href="#contact" class="hover:text-sea" data-i18n="nav.contact">Contact</a>
+      </nav>
+      <div class="flex items-center gap-2">
+        <button onclick="openWishlist()" class="relative w-10 h-10 grid place-items-center rounded-full hover:bg-paper text-[#3A5568]" aria-label="Saved packages">
+          <svg class="i text-[20px]"><use href="#ic-heart"/></svg>
+          <span id="wish-badge" class="hide absolute top-1 right-1 min-w-[17px] h-[17px] px-1 rounded-full bg-sea text-white text-[10px] font-bold grid place-items-center">0</span>
+        </button>
+        <a href="#planner" class="hidden sm:inline-flex items-center gap-2 bg-sun hover:brightness-95 text-ink font-bold text-[14px] px-5 py-2.5 rounded-full shadow-lift" data-i18n="cta.quote">Get a price quote</a>
+        <button onclick="toggleMenu()" class="lg:hidden w-10 h-10 grid place-items-center rounded-full hover:bg-paper" aria-label="Menu"><svg class="i text-[22px]"><use href="#ic-menu"/></svg></button>
+      </div>
+    </div>
+    <div id="menu" class="hide lg:hidden border-t border-[#DDE7EC] bg-white">
+      <div class="wrap py-3 grid gap-1 text-[15px] font-semibold text-[#3A5568]">
+        <a href="#packages" onclick="toggleMenu()" class="py-2.5" data-i18n="nav.packages">Packages</a>
+        <a href="#planner" onclick="toggleMenu()" class="py-2.5" data-i18n="nav.planner">Price planner</a>
+        <a href="#services" onclick="toggleMenu()" class="py-2.5" data-i18n="nav.services">Services</a>
+        <a href="#gallery" onclick="toggleMenu()" class="py-2.5" data-i18n="nav.gallery">Gallery</a>
+        <a href="#contact" onclick="toggleMenu()" class="py-2.5" data-i18n="nav.contact">Contact</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section id="top" class="relative overflow-hidden bg-deep text-white">
+    <svg class="absolute inset-0 w-full h-full" viewBox="0 0 1200 560" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#064A68"/><stop offset="1" stop-color="#0A6A94"/>
+        </linearGradient>
+        <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0E7EA8"/><stop offset="1" stop-color="#075877"/>
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="560" fill="url(#sky)"/>
+      <circle cx="905" cy="170" r="108" fill="#F5C518" opacity=".92"/>
+      <path d="M0 402c120-54 210 6 300-20s150-70 268-46 176 74 300 52 232-58 332-22v94H0Z" fill="#0B5B7C" opacity=".85"/>
+      <path d="M0 448h1200v112H0Z" fill="url(#water)"/>
+      <path d="M0 448c150 26 250-16 380 4s210 40 340 16 260-38 480-8v-12H0Z" fill="#0E7EA8" opacity=".6"/>
+      <g stroke="#ffffff" stroke-opacity=".35" stroke-width="2" stroke-dasharray="7 11" fill="none">
+        <path d="M-20 300C220 190 420 300 640 180S1010 90 1240 150"/>
+      </g>
+      <g fill="#ffffff" opacity=".55">
+        <circle cx="150" cy="120" r="3"/><circle cx="420" cy="88" r="2"/><circle cx="1080" cy="330" r="2.5"/>
+      </g>
+    </svg>
+
+    <div class="wrap relative py-16 lg:py-20 grid lg:grid-cols-[1.05fr_.95fr] gap-10 lg:gap-14 items-center">
+      <div>
+        <p class="inline-flex items-center gap-2 bg-white/12 border border-white/20 rounded-full pl-2 pr-4 py-1.5 text-[12.5px] font-semibold text-sand">
+          <span class="bg-sun text-ink rounded-full px-2 py-0.5 text-[11px] font-bold" data-i18n="hero.badge.a">Since 2014</span>
+          <span data-i18n="hero.badge.b">2,400+ trips arranged from Dhaka</span>
+        </p>
+        <h1 class="font-display font-extrabold text-[38px] sm:text-[52px] leading-[1.03] mt-5 tracking-tight" data-i18n="hero.h1">Bangladesh and beyond, priced before you pack.</h1>
+        <p class="mt-5 text-[16.5px] leading-relaxed text-white/85 max-w-[52ch]" data-i18n="hero.sub">Choose a destination, set your nights and hotel standard, and watch the cost update line by line. Leave your name and mobile number and our team confirms the final rate the same day.</p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="#planner" class="inline-flex items-center gap-2.5 bg-sun text-ink font-bold px-7 py-4 rounded-2xl shadow-deep hover:brightness-95">
+            <svg class="i text-[18px]"><use href="#ic-doc"/></svg><span data-i18n="hero.cta1">Build my quote</span>
+          </a>
+          <a href="#packages" class="inline-flex items-center gap-2.5 bg-white/10 border border-white/25 font-semibold px-6 py-4 rounded-2xl hover:bg-white/20">
+            <span data-i18n="hero.cta2">See ready packages</span><svg class="i text-[16px]"><use href="#ic-right"/></svg>
+          </a>
+        </div>
+        <dl class="mt-10 grid grid-cols-3 gap-4 max-w-md border-t border-white/15 pt-6">
+          <div><dt class="text-[12px] text-white/70" data-i18n="hero.s1l">Destinations</dt><dd class="font-display font-bold text-[24px]" data-num>26</dd></div>
+          <div><dt class="text-[12px] text-white/70" data-i18n="hero.s2l">Same-day quotes</dt><dd class="font-display font-bold text-[24px]" data-num>98%</dd></div>
+          <div><dt class="text-[12px] text-white/70" data-i18n="hero.s3l">Repeat travellers</dt><dd class="font-display font-bold text-[24px]" data-num>61%</dd></div>
+        </dl>
+      </div>
+
+      <!-- boarding-pass style starter -->
+      <div class="bg-white text-ink rounded-[22px] shadow-deep overflow-hidden">
+        <div class="bg-sand px-6 py-3 flex items-center justify-between">
+          <span class="font-display font-bold text-[15px] text-deep" data-i18n="quick.title">Quick estimate</span>
+          <svg class="i text-[18px] text-sea"><use href="#ic-plane"/></svg>
+        </div>
+        <div class="p-6 grid gap-4">
+          <div>
+            <label class="lbl" for="q-dest" data-i18n="f.dest">Where to</label>
+            <select id="q-dest" class="field"></select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="lbl" for="q-pax" data-i18n="f.pax">Travellers</label><input id="q-pax" type="number" min="1" value="2" class="field"></div>
+            <div><label class="lbl" for="q-nights" data-i18n="f.nights">Nights</label><input id="q-nights" type="number" min="1" value="3" class="field"></div>
+          </div>
+          <div><label class="lbl" for="q-date" data-i18n="f.date">Travel date</label><input id="q-date" type="date" class="field"></div>
+          <button onclick="sendQuickToPlanner()" class="w-full bg-sea hover:bg-deep text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2">
+            <span data-i18n="quick.cta">Show the price breakdown</span><svg class="i text-[16px]"><use href="#ic-down"/></svg>
+          </button>
+          <p class="text-[12px] text-[#5C7688] leading-snug" data-i18n="quick.note">No payment now. You will see every line of the cost before anyone calls you.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust strip -->
+  <div class="bg-white border-y border-[#DDE7EC]">
+    <div class="wrap py-5 grid grid-cols-2 md:grid-cols-4 gap-4 text-[13.5px] font-semibold text-[#3A5568]">
+      <span class="flex items-center gap-2.5"><svg class="i text-sea text-[19px]"><use href="#ic-shield"/></svg><span data-i18n="trust.1">Registered agency, written invoices</span></span>
+      <span class="flex items-center gap-2.5"><svg class="i text-sea text-[19px]"><use href="#ic-passport"/></svg><span data-i18n="trust.2">Visa filing support</span></span>
+      <span class="flex items-center gap-2.5"><svg class="i text-sea text-[19px]"><use href="#ic-headset"/></svg><span data-i18n="trust.3">On-trip help, day or night</span></span>
+      <span class="flex items-center gap-2.5"><svg class="i text-sea text-[19px]"><use href="#ic-bed"/></svg><span data-i18n="trust.4">Hotels we have inspected</span></span>
+    </div>
+  </div>
+
+  <!-- Packages -->
+  <section id="packages" class="py-16">
+    <div class="wrap">
+      <div class="flex flex-wrap items-end justify-between gap-5 mb-8">
+        <div>
+          <h2 class="font-display font-extrabold text-[30px] sm:text-[36px] tracking-tight" data-i18n="pk.h">Packages people book most</h2>
+          <p class="text-[15px] text-[#5C7688] mt-2 max-w-[60ch]" data-i18n="pk.sub">Fixed departures with published rates. Every one of them can be reshaped around your dates, hotel standard and group size.</p>
+        </div>
+        <div class="flex flex-wrap gap-2" id="filters">
+          <button data-f="all" class="flt tab-on text-[13px] font-semibold px-4 py-2 rounded-full" data-i18n="pk.f.all">All</button>
+          <button data-f="domestic" class="flt bg-white border border-[#DDE7EC] text-[#3A5568] text-[13px] font-semibold px-4 py-2 rounded-full" data-i18n="pk.f.dom">Inside Bangladesh</button>
+          <button data-f="international" class="flt bg-white border border-[#DDE7EC] text-[#3A5568] text-[13px] font-semibold px-4 py-2 rounded-full" data-i18n="pk.f.int">Overseas</button>
+        </div>
+      </div>
+      <div id="pkgrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-7"></div>
+    </div>
+  </section>
+
+  <!-- Planner -->
+  <section id="planner" class="py-16 bg-white border-y border-[#DDE7EC]">
+    <div class="wrap">
+      <div class="max-w-[62ch] mb-9">
+        <h2 class="font-display font-extrabold text-[30px] sm:text-[36px] tracking-tight" data-i18n="pl.h">Price planner</h2>
+        <p class="text-[15px] text-[#5C7688] mt-2" data-i18n="pl.sub">Move the options and the total moves with you. What you see here is what we put on the invoice, taxes and service charge included.</p>
+      </div>
+
+      <div class="grid lg:grid-cols-[1.15fr_.85fr] gap-8 items-start">
+        <div class="grid gap-7">
+          <div class="bg-paper rounded-2xl p-6 border border-[#DDE7EC]">
+            <h3 class="font-display font-bold text-[17px] text-deep mb-4" data-i18n="pl.step1">Trip basics</h3>
+            <div class="grid sm:grid-cols-2 gap-4">
+              <div class="sm:col-span-2">
+                <label class="lbl" for="c-dest" data-i18n="f.dest">Where to</label>
+                <select id="c-dest" class="field" onchange="calc()"></select>
+              </div>
+              <div>
+                <label class="lbl" data-i18n="f.pax">Travellers</label>
+                <div class="flex items-center bg-white border-[1.5px] border-[#D7E2E9] rounded-xl overflow-hidden">
+                  <button onclick="step('c-pax',-1)" class="px-4 py-2.5 text-[#3A5568] hover:bg-paper font-bold text-lg" aria-label="minus">−</button>
+                  <input id="c-pax" type="number" min="1" value="2" onchange="calc()" class="w-full text-center font-bold text-[15px] outline-none py-2.5">
+                  <button onclick="step('c-pax',1)" class="px-4 py-2.5 text-[#3A5568] hover:bg-paper font-bold text-lg" aria-label="plus">+</button>
+                </div>
+              </div>
+              <div>
+                <label class="lbl" data-i18n="f.nights">Nights</label>
+                <div class="flex items-center bg-white border-[1.5px] border-[#D7E2E9] rounded-xl overflow-hidden">
+                  <button onclick="step('c-nights',-1)" class="px-4 py-2.5 text-[#3A5568] hover:bg-paper font-bold text-lg" aria-label="minus">−</button>
+                  <input id="c-nights" type="number" min="1" value="3" onchange="calc()" class="w-full text-center font-bold text-[15px] outline-none py-2.5">
+                  <button onclick="step('c-nights',1)" class="px-4 py-2.5 text-[#3A5568] hover:bg-paper font-bold text-lg" aria-label="plus">+</button>
+                </div>
+              </div>
+              <div>
+                <label class="lbl" for="c-kids" data-i18n="f.kids">Children under 11</label>
+                <input id="c-kids" type="number" min="0" value="0" onchange="calc()" class="field">
+              </div>
+              <div>
+                <label class="lbl" for="c-date2" data-i18n="f.date">Travel date</label>
+                <input id="c-date2" type="date" class="field" onchange="calc()">
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-paper rounded-2xl p-6 border border-[#DDE7EC]">
+            <h3 class="font-display font-bold text-[17px] text-deep mb-4" data-i18n="pl.step2">Hotel standard</h3>
+            <div class="grid grid-cols-3 gap-3" id="tiers">
+              <button onclick="setTier('3star')" data-t="3star" class="opt sel rounded-xl p-4 text-center">
+                <svg class="i text-[20px] text-sea mx-auto"><use href="#ic-bed"/></svg>
+                <span class="block font-bold text-[13px] mt-1.5" data-i18n="tier.3">3-star</span>
+                <span class="block text-[11.5px] text-[#5C7688]" data-i18n="tier.3s">Clean and central</span>
+              </button>
+              <button onclick="setTier('4star')" data-t="4star" class="opt rounded-xl p-4 text-center">
+                <svg class="i text-[20px] text-sun mx-auto"><use href="#ic-star"/></svg>
+                <span class="block font-bold text-[13px] mt-1.5" data-i18n="tier.4">4-star</span>
+                <span class="block text-[11.5px] text-[#5C7688]" data-tier-price="4">+৳3,500 / night</span>
+              </button>
+              <button onclick="setTier('5star')" data-t="5star" class="opt rounded-xl p-4 text-center">
+                <svg class="i text-[20px] text-deep mx-auto"><use href="#ic-crown"/></svg>
+                <span class="block font-bold text-[13px] mt-1.5" data-i18n="tier.5">5-star</span>
+                <span class="block text-[11.5px] text-[#5C7688]" data-tier-price="5">+৳8,000 / night</span>
+              </button>
+            </div>
+            <p class="text-[12.5px] text-[#5C7688] mt-3" data-i18n="pl.rooms">Rooms are priced for two sharing. We add a room automatically for odd numbers.</p>
+          </div>
+
+          <div class="bg-paper rounded-2xl p-6 border border-[#DDE7EC]">
+            <h3 class="font-display font-bold text-[17px] text-deep mb-4" data-i18n="pl.step3">What to include</h3>
+            <div class="grid gap-2.5" id="addons"></div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <aside class="lg:sticky lg:top-24 bg-ink text-white rounded-[22px] overflow-hidden shadow-deep">
+          <div class="px-6 pt-6 pb-4 flex items-start justify-between gap-3">
+            <div>
+              <h3 class="font-display font-bold text-[19px]" data-i18n="sum.h">Your quotation</h3>
+              <p class="text-[12px] text-white/60 mt-0.5" data-i18n="sum.live">Updates as you change the options</p>
+            </div>
+            <svg viewBox="0 0 400 300" class="w-12 h-9 opacity-90"><use href="#brandmark"/></svg>
+          </div>
+          <div class="px-6 pb-5 grid gap-2.5 text-[14px]">
+            <div class="flex justify-between gap-4 text-white/80"><span id="sum-name">Cox's Bazar</span><span id="sum-hotel-total" class="font-semibold text-white">৳0</span></div>
+            <div class="flex justify-between gap-4 text-white/80"><span data-i18n="sum.upgrade">Room upgrade</span><span id="sum-upgrade" class="font-semibold text-white">—</span></div>
+            <div class="flex justify-between gap-4 text-white/80"><span data-i18n="sum.flight">Flights / transit</span><span id="sum-flight" class="font-semibold text-white">৳0</span></div>
+            <div class="flex justify-between gap-4 text-white/80"><span data-i18n="sum.extras">Extras</span><span id="sum-extras" class="font-semibold text-white">৳0</span></div>
+            <div class="flex justify-between gap-4 text-white/80" id="row-kids"><span data-i18n="sum.kids">Child discount</span><span id="sum-kids" class="font-semibold text-sun">−৳0</span></div>
+            <div class="flex justify-between gap-4 text-[12.5px] text-white/55 pt-2 mt-1 border-t border-white/12">
+              <span id="sum-meta">2 travellers · 3 nights</span><span id="sum-rooms">2 rooms</span>
+            </div>
+          </div>
+          <div class="bg-white/[.07] mx-4 mb-4 rounded-2xl p-5">
+            <p class="text-[12px] text-white/65" data-i18n="sum.total">Estimated total</p>
+            <p class="font-display font-extrabold text-[34px] leading-tight text-sun" id="sum-total">৳0</p>
+            <p class="text-[13px] text-white/70" id="sum-pp">৳0 per person</p>
+            <p class="text-[11.5px] text-white/55 mt-3 flex gap-1.5"><svg class="i text-sun text-[14px] shrink-0 mt-0.5"><use href="#ic-info"/></svg><span data-i18n="sum.note">Government tax and our service charge are already inside this figure.</span></p>
+          </div>
+          <div class="px-4 pb-5 grid gap-2.5">
+            <button onclick="openQuote()" class="w-full bg-sun text-ink font-bold py-3.5 rounded-xl hover:brightness-95 flex items-center justify-center gap-2">
+              <svg class="i text-[17px]"><use href="#ic-doc"/></svg><span data-i18n="sum.cta">Get the confirmed quote</span>
+            </button>
+            <button onclick="waQuote()" class="w-full bg-[#1FA855] hover:bg-[#188544] text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
+              <svg class="i i-fill text-[19px]"><use href="#ic-wa"/></svg><span data-i18n="sum.wa">Send it on WhatsApp</span>
+            </button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services -->
+  <section id="services" class="py-16">
+    <div class="wrap">
+      <h2 class="font-display font-extrabold text-[30px] sm:text-[36px] tracking-tight" data-i18n="sv.h">Everything else we handle</h2>
+      <p class="text-[15px] text-[#5C7688] mt-2 max-w-[60ch]" data-i18n="sv.sub">Most travellers come to us for one thing and stay for the rest.</p>
+      <div id="svgrid" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8"></div>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section id="gallery" class="py-16 bg-white border-y border-[#DDE7EC]">
+    <div class="wrap">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-7">
+        <div>
+          <h2 class="font-display font-extrabold text-[30px] sm:text-[36px] tracking-tight" data-i18n="gl.h">From recent trips</h2>
+          <p class="text-[15px] text-[#5C7688] mt-2" data-i18n="gl.sub">Photos sent in by travellers who went with us.</p>
+        </div>
+      </div>
+      <div id="glgrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+    </div>
+  </section>
+
+  <!-- Reviews -->
+  <section class="py-16">
+    <div class="wrap grid lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-1">
+        <h2 class="font-display font-extrabold text-[30px] tracking-tight" data-i18n="rv.h">What travellers say</h2>
+        <p class="text-[15px] text-[#5C7688] mt-2" data-i18n="rv.sub">Collected after the trip, not before the booking.</p>
+      </div>
+      <div class="lg:col-span-2 grid sm:grid-cols-2 gap-5" id="reviews"></div>
+    </div>
+  </section>
+
+  <!-- Contact / Footer -->
+  <footer id="contact" class="bg-ink text-white pt-14">
+    <div class="wrap grid md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12">
+      <div>
+        <div class="flex items-center gap-3">
+          <svg viewBox="0 0 400 300" class="w-14 h-11"><use href="#brandmark"/></svg>
+          <span class="font-display font-extrabold text-[17px] leading-tight">Supreme Tours<br>&amp; Travels</span>
+        </div>
+        <p class="text-[13.5px] text-white/65 leading-relaxed mt-4" data-i18n="ft.about">Holiday packages, air tickets, hotel bookings and visa filing, arranged from our Dhaka office for travellers going anywhere.</p>
+      </div>
+      <div>
+        <h4 class="font-display font-bold text-[15px] mb-4" data-i18n="ft.explore">Explore</h4>
+        <ul class="grid gap-2.5 text-[13.5px] text-white/65">
+          <li><a href="#packages" class="hover:text-sun" data-i18n="nav.packages">Packages</a></li>
+          <li><a href="#planner" class="hover:text-sun" data-i18n="nav.planner">Price planner</a></li>
+          <li><a href="#services" class="hover:text-sun" data-i18n="nav.services">Services</a></li>
+          <li><a href="#gallery" class="hover:text-sun" data-i18n="nav.gallery">Gallery</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="font-display font-bold text-[15px] mb-4" data-i18n="ft.dest">Popular right now</h4>
+        <ul id="ftdest" class="grid gap-2.5 text-[13.5px] text-white/65"></ul>
+      </div>
+      <div>
+        <h4 class="font-display font-bold text-[15px] mb-4" data-i18n="ft.office">Head office</h4>
+        <ul class="grid gap-3 text-[13.5px] text-white/65">
+          <li class="flex gap-2.5"><svg class="i text-sun text-[16px] shrink-0 mt-0.5"><use href="#ic-pin"/></svg><span id="ft-addr">Level 4, Kazi Tower, Motijheel, Dhaka 1000</span></li>
+          <li class="flex gap-2.5"><svg class="i text-sun text-[16px] shrink-0 mt-0.5"><use href="#ic-phone"/></svg><a href="tel:+8801700000000" class="hover:text-sun" id="ft-phone">+880 1700-000000</a></li>
+          <li class="flex gap-2.5"><svg class="i text-sun text-[16px] shrink-0 mt-0.5"><use href="#ic-mail"/></svg><a href="mailto:info@supremetours.com" class="hover:text-sun" id="ft-mail">info@supremetours.com</a></li>
+          <li class="flex gap-2.5"><svg class="i text-sun text-[16px] shrink-0 mt-0.5"><use href="#ic-clock"/></svg><span data-i18n="ft.hours">Saturday to Thursday, 10am–8pm</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-white/10">
+      <div class="wrap py-5 flex flex-wrap items-center justify-between gap-3 text-[12.5px] text-white/50">
+        <span>© <span id="year">2026</span> Supreme Tours &amp; Travels</span>
+        <a href="admin.html" class="hover:text-sun flex items-center gap-1.5"><svg class="i text-[14px]"><use href="#ic-lock"/></svg><span data-i18n="ft.admin">Staff sign in</span></a>
+      </div>
+    </div>
+  </footer>
+
+  <a href="#" onclick="waQuote();return false;" class="fixed bottom-5 right-5 z-30 bg-[#1FA855] text-white w-14 h-14 rounded-full grid place-items-center shadow-deep noprint" aria-label="WhatsApp">
+    <svg class="i i-fill text-[28px]"><use href="#ic-wa"/></svg>
+  </a>
+</div>
+
+<!-- ========== QUOTE MODAL ========== -->
+<div id="quote-modal" class="hide fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white rounded-[22px] max-w-[440px] w-full mx-auto my-6 overflow-hidden shadow-deep">
+    <div class="bg-sand px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg viewBox="0 0 400 300" class="w-11 h-8"><use href="#brandmark"/></svg>
+        <div>
+          <p class="font-display font-bold text-[15px] text-deep" data-i18n="qm.h">Confirm your quote</p>
+          <p class="text-[11.5px] text-[#5C7688]" id="qm-ref">New quotation</p>
+        </div>
+      </div>
+      <button onclick="closeQuote()" class="w-9 h-9 grid place-items-center rounded-full hover:bg-white/60" aria-label="Close"><svg class="i text-[20px]"><use href="#ic-x"/></svg></button>
+    </div>
+
+    <div id="qm-body" class="p-6">
+      <div class="bg-paper rounded-xl p-4 text-[13px] grid gap-2 mb-5 border border-[#DDE7EC]">
+        <div class="flex justify-between gap-3"><span class="text-[#5C7688]" data-i18n="qm.trip">Trip</span><strong id="qm-dest">—</strong></div>
+        <div class="flex justify-between gap-3"><span class="text-[#5C7688]" data-i18n="qm.people">People</span><strong id="qm-meta">—</strong></div>
+        <div class="flex justify-between gap-3"><span class="text-[#5C7688]" data-i18n="qm.hotel">Hotel</span><strong id="qm-hotel">—</strong></div>
+        <div class="flex justify-between gap-3 border-t border-[#DDE7EC] pt-2"><span class="font-semibold" data-i18n="qm.total">Estimated total</span><strong id="qm-total" class="text-deep font-display text-[16px]">৳0</strong></div>
+      </div>
+      <form onsubmit="submitLead(event)" class="grid gap-3.5">
+        <div><label class="lbl" for="lead-name" data-i18n="qm.name">Your name</label><input id="lead-name" required class="field" data-ph="qm.ph.name" placeholder="Md. Rahim Uddin"></div>
+        <div><label class="lbl" for="lead-phone" data-i18n="qm.phone">Mobile number</label><input id="lead-phone" required type="tel" inputmode="tel" class="field" placeholder="017XXXXXXXX"></div>
+        <div><label class="lbl" for="lead-email" data-i18n="qm.email">Email (optional)</label><input id="lead-email" type="email" class="field" placeholder="you@example.com"></div>
+        <div><label class="lbl" for="lead-note" data-i18n="qm.note">Anything we should know?</label><textarea id="lead-note" rows="2" class="field" data-ph="qm.ph.note" placeholder="Honeymoon, elderly parents, halal meals…"></textarea></div>
+        <label class="flex gap-2.5 items-start text-[12.5px] text-[#5C7688]">
+          <input type="checkbox" id="lead-consent" checked class="mt-0.5 w-4 h-4 accent-[#0A6A94]">
+          <span data-i18n="qm.consent">You may contact me on this number about this trip.</span>
+        </label>
+        <button type="submit" id="lead-btn" class="w-full bg-sea hover:bg-deep text-white font-bold py-3.5 rounded-xl" data-i18n="qm.cta">Send me the confirmed quote</button>
+        <p class="text-[11.5px] text-[#5C7688] text-center" data-i18n="qm.small">We use your number only for this quotation. No marketing blasts.</p>
+      </form>
+    </div>
+
+    <div id="qm-done" class="hide p-8 text-center">
+      <div class="w-16 h-16 rounded-full bg-[#E8F6EE] text-leaf grid place-items-center mx-auto"><svg class="i text-[30px]"><use href="#ic-check"/></svg></div>
+      <h3 class="font-display font-bold text-[20px] mt-4" data-i18n="qm.okh">Quote sent</h3>
+      <p class="text-[14px] text-[#5C7688] mt-2 leading-relaxed" id="qm-okmsg"></p>
+      <div class="grid gap-2.5 mt-6">
+        <button onclick="waQuote()" class="bg-[#1FA855] text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2"><svg class="i i-fill text-[19px]"><use href="#ic-wa"/></svg><span data-i18n="qm.okwa">Also message us now</span></button>
+        <button onclick="window.print()" class="border-[1.5px] border-[#D7E2E9] font-semibold py-3 rounded-xl" data-i18n="qm.okprint">Save as PDF</button>
+        <button onclick="closeQuote()" class="text-[#5C7688] font-semibold py-2 text-[13.5px]" data-i18n="qm.okclose">Back to the site</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hide"></div>
+
+<script src="assets/js/config.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/data.js"></script>
+<script src="assets/js/site.js"></script>
+</body>
+</html>
