@@ -8,8 +8,8 @@ window.CONFIG = {
      Leave both blank to run in DEMO MODE (everything saves in the
      browser only, nothing is lost but nothing is shared either).
      Fill them in and the whole site switches to Supabase.            */
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  SUPABASE_URL: 'https://rjfobeowcrhsgefpuhbf.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_XJZND0TUNPQFlP8DJvvIdg_AKFxHxa9',
   STORAGE_BUCKET: 'media',
 
   /* ---- Business details -------------------------------------------- */
