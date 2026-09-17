@@ -105,6 +105,17 @@ create table if not exists invoices (
 );
 create index if not exists invoices_created_idx on invoices (created_at desc);
 
+-- ---------- site settings ----------------------------------------------
+-- One row holding every business detail editable from the Site info tab:
+-- phone, WhatsApp, email, address, trade licence, currency rate and every
+-- price-planner fee. The public must be able to read it (so the website
+-- itself can display the right phone number), but only staff can change it.
+create table if not exists settings (
+  id          text primary key default 'site',
+  data        jsonb default '{}'::jsonb,
+  updated_at  timestamptz default now()
+);
+
 -- =====================================================================
 -- Security. The public may read the catalogue and submit one quotation.
 -- Everything else needs a signed-in staff account.
@@ -115,6 +126,7 @@ alter table gallery    enable row level security;
 alter table customers  enable row level security;
 alter table quotations enable row level security;
 alter table invoices   enable row level security;
+alter table settings   enable row level security;
 
 drop policy if exists "public read packages" on packages;
 drop policy if exists "public read services" on services;
@@ -144,6 +156,12 @@ create policy "staff manage customers"    on customers for all to authenticated 
 -- Invoices are staff-only, top to bottom.
 drop policy if exists "staff manage invoices" on invoices;
 create policy "staff manage invoices" on invoices for all to authenticated using (true) with check (true);
+
+-- Everyone reads the site's contact details and pricing rules; only staff change them.
+drop policy if exists "public read settings" on settings;
+drop policy if exists "staff write settings" on settings;
+create policy "public read settings" on settings for select using (true);
+create policy "staff write settings" on settings for all to authenticated using (true) with check (true);
 
 -- ---------- storage ----------------------------------------------------
 -- Create a PUBLIC bucket called "media" in Storage first, then run these.

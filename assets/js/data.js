@@ -53,6 +53,35 @@ const DB = {
   }
 };
 
+/* Site-wide settings (phone, address, fees, …). Saved as one row so the
+   admin panel can change any business detail without touching code.
+   Falls back to localStorage in demo mode, same as everything else.    */
+const SETTINGS_ID = 'site';
+async function getSettings() {
+  if (ONLINE()) {
+    const { data, error } = await sb.from('settings').select('*').eq('id', SETTINGS_ID).limit(1);
+    if (error) { console.warn('settings', error.message); return LS.get('settings_data', {}); }
+    return (data && data[0] && data[0].data) || {};
+  }
+  return LS.get('settings_data', {});
+}
+async function saveSettings(patch) {
+  const merged = { ...(await getSettings()), ...patch };
+  if (ONLINE()) {
+    const { error } = await sb.from('settings').upsert({ id: SETTINGS_ID, data: merged, updated_at: new Date().toISOString() });
+    if (error) throw error;
+  } else {
+    LS.set('settings_data', merged);
+  }
+  return merged;
+}
+/* Overrides the defaults in config.js with anything saved from the admin
+   panel. Must run before any page reads CONFIG.* values.               */
+async function applySettings() {
+  try { Object.assign(CONFIG, await getSettings()); }
+  catch (e) { console.warn('applySettings', e); }
+}
+
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id' + Date.now() + Math.random().toString(16).slice(2));
 const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || ('item' + Date.now());
 

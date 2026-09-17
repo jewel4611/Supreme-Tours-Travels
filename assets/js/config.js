@@ -14,11 +14,11 @@ window.CONFIG = {
 
   /* ---- Business details -------------------------------------------- */
   COMPANY:    'Supreme Tours & Travels',
-  WHATSAPP:   '8801700000000',            // digits only, country code first
-  PHONE:      '+880 1700-000000',
-  EMAIL:      'info@supremetours.com',
-  ADDRESS_EN: 'Level 4, Kazi Tower, Motijheel, Dhaka 1000',
-  ADDRESS_BN: 'লেভেল ৪, কাজী টাওয়ার, মতিঝিল, ঢাকা ১০০০',
+  WHATSAPP:   '8801614501860',            // digits only, country code first
+  PHONE:      '+880 1614-501860',
+  EMAIL:      'tours.supremebd@gmail.com',
+  ADDRESS_EN: '147/A (3rd Floor), Airport Road, Dhaka 1215',
+  ADDRESS_BN: '১৪৭/এ (৩য় তলা), এয়ারপোর্ট রোড, ঢাকা ১২১৫',
   TRADE_LICENCE: 'TRAD/DSCC/000000/2024',
   BIN: '000000000-0000',
 

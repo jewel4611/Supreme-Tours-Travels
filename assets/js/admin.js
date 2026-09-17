@@ -2,8 +2,9 @@
    Staff panel
    ===================================================================== */
 const TABS = [
-  { id: 'dash', name: 'Dashboard' }, { id: 'quotations', name: 'Quotations' },
-  { id: 'invoices', name: 'Bills' }, { id: 'customers', name: 'Customers' },
+  { id: 'dash', name: 'Dashboard' }, { id: 'siteinfo', name: 'Site info' },
+  { id: 'quotations', name: 'Quotations' }, { id: 'invoices', name: 'Bills' },
+  { id: 'customers', name: 'Customers' },
   { id: 'packages', name: 'Packages' }, { id: 'services', name: 'Services' },
   { id: 'gallery', name: 'Photos' }, { id: 'setup', name: 'Setup' }
 ];
@@ -58,7 +59,7 @@ function go(id) {
     const on = b.dataset.tab === id;
     b.className = 'adtab text-[13px] font-semibold px-4 py-2 rounded-lg whitespace-nowrap ' + (on ? 'tab-on' : 'text-white/70 hover:text-white');
   });
-  ({ dash: viewDash, quotations: viewQuotations, invoices: viewInvoices, customers: viewCustomers,
+  ({ dash: viewDash, siteinfo: viewSiteInfo, quotations: viewQuotations, invoices: viewInvoices, customers: viewCustomers,
      packages: viewPackages, services: viewServices, gallery: viewGallery, setup: viewSetup })[id]();
 }
 const head = (title, sub, actions = '') => `
@@ -71,6 +72,85 @@ const btnPrimary = (label, onclick, ic = 'ic-plus') =>
   `<button onclick="${onclick}" class="bg-deep text-white text-[13px] font-bold px-4 py-2.5 rounded-xl flex items-center gap-2">${icon(ic, 'text-[16px]')}${label}</button>`;
 const btnGhost = (label, onclick, ic = 'ic-down') =>
   `<button onclick="${onclick}" class="bg-white border border-[#DDE7EC] text-[13px] font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2">${icon(ic, 'text-[16px]')}${label}</button>`;
+
+/* --------------------------------------------------------- site info */
+function numField(name, label, v, step) {
+  return `<div><label class="lbl">${label}</label><input name="${name}" type="number" ${step ? `step="${step}"` : ''} value="${esc(v)}" class="field" required></div>`;
+}
+function viewSiteInfo() {
+  const c = CONFIG;
+  $('pane').innerHTML = head('Site information', 'Shown across the website and printed on every quotation and invoice — saved changes go live for every visitor immediately') + `
+    <form onsubmit="saveSiteInfo(event)" class="grid gap-5 max-w-[820px]">
+      <div class="bg-white rounded-2xl shadow-lift p-6">
+        <h2 class="font-display font-bold text-[16px] mb-4">Contact and identity</h2>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div><label class="lbl">Company name</label><input name="COMPANY" value="${esc(c.COMPANY)}" class="field" required></div>
+          <div><label class="lbl">Phone number (shown on the site)</label><input name="PHONE" value="${esc(c.PHONE)}" class="field" required placeholder="+880 1XXX-XXXXXX"></div>
+          <div><label class="lbl">WhatsApp number (digits only, country code first)</label><input name="WHATSAPP" value="${esc(c.WHATSAPP)}" class="field" required placeholder="8801XXXXXXXXX"></div>
+          <div><label class="lbl">Email</label><input name="EMAIL" type="email" value="${esc(c.EMAIL)}" class="field" required></div>
+          <div class="sm:col-span-2"><label class="lbl">Address (English)</label><input name="ADDRESS_EN" value="${esc(c.ADDRESS_EN)}" class="field"></div>
+          <div class="sm:col-span-2"><label class="lbl">ঠিকানা (বাংলা)</label><input name="ADDRESS_BN" value="${esc(c.ADDRESS_BN)}" class="field font-bangla"></div>
+          <div><label class="lbl">Trade licence number</label><input name="TRADE_LICENCE" value="${esc(c.TRADE_LICENCE)}" class="field"></div>
+          <div><label class="lbl">BIN</label><input name="BIN" value="${esc(c.BIN)}" class="field"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-lift p-6">
+        <h2 class="font-display font-bold text-[16px] mb-4">Money</h2>
+        <div class="grid sm:grid-cols-2 gap-4">
+          ${numField('USD_RATE', 'USD exchange rate (1 USD = ? BDT)', c.USD_RATE)}
+          ${numField('VAT_PERCENT', 'VAT percent on invoices (0 to switch off)', c.VAT_PERCENT)}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-lift p-6">
+        <h2 class="font-display font-bold text-[16px] mb-4">Price planner rules</h2>
+        <p class="text-[12.5px] text-[#5C7688] mb-4">These are the numbers behind the calculator on the website — transfers, meals, room upgrades and so on.</p>
+        <div class="grid sm:grid-cols-3 gap-4">
+          ${numField('TRANSFER_FEE', 'Airport transfer (৳ / booking)', c.TRANSFER_FEE)}
+          ${numField('MEAL_FEE', 'Meals (৳ / person / day)', c.MEAL_FEE)}
+          ${numField('GUIDE_FEE', 'Guide and tickets (৳ / booking)', c.GUIDE_FEE)}
+          ${numField('INSURANCE_FEE', 'Travel insurance (৳ / person)', c.INSURANCE_FEE)}
+          ${numField('VISA_FEE', 'Visa filing (৳ / person)', c.VISA_FEE)}
+          ${numField('UPGRADE_4STAR', '4-star upgrade (৳ / room / night)', c.UPGRADE_4STAR)}
+          ${numField('UPGRADE_5STAR', '5-star upgrade (৳ / room / night)', c.UPGRADE_5STAR)}
+          ${numField('CHILD_DISCOUNT', 'Child discount, 0 to 1 (0.5 = half price)', c.CHILD_DISCOUNT, '0.05')}
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-lift p-6">
+        <h2 class="font-display font-bold text-[16px] mb-4">Staff panel</h2>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div><label class="lbl">Demo-mode password ${ONLINE() ? '<span class="text-[#5C7688] font-normal">— not used, Supabase login is active</span>' : ''}</label>
+            <input name="DEMO_PASSWORD" value="${esc(c.DEMO_PASSWORD)}" class="field" ${ONLINE() ? 'disabled' : ''}></div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button class="bg-deep text-white font-bold px-6 py-3 rounded-xl">Save changes</button>
+        <span class="text-[12.5px] text-[#5C7688]">${ONLINE() ? 'Saved to Supabase — every visitor sees it on their next page load.' : 'Demo mode: saved in this browser only.'}</span>
+      </div>
+    </form>`;
+}
+async function saveSiteInfo(e) {
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(e.target).entries());
+  const patch = {
+    COMPANY: d.COMPANY, PHONE: d.PHONE, WHATSAPP: d.WHATSAPP.replace(/\D/g, ''), EMAIL: d.EMAIL,
+    ADDRESS_EN: d.ADDRESS_EN, ADDRESS_BN: d.ADDRESS_BN, TRADE_LICENCE: d.TRADE_LICENCE, BIN: d.BIN,
+    USD_RATE: +d.USD_RATE, VAT_PERCENT: +d.VAT_PERCENT,
+    TRANSFER_FEE: +d.TRANSFER_FEE, MEAL_FEE: +d.MEAL_FEE, GUIDE_FEE: +d.GUIDE_FEE,
+    INSURANCE_FEE: +d.INSURANCE_FEE, VISA_FEE: +d.VISA_FEE,
+    UPGRADE_4STAR: +d.UPGRADE_4STAR, UPGRADE_5STAR: +d.UPGRADE_5STAR, CHILD_DISCOUNT: +d.CHILD_DISCOUNT,
+    ...(ONLINE() ? {} : { DEMO_PASSWORD: d.DEMO_PASSWORD })
+  };
+  try {
+    await saveSettings(patch);
+    Object.assign(CONFIG, patch);
+    toast('Saved — live on the website now');
+    go('siteinfo');
+  } catch (err) { toast('Could not save: ' + err.message); }
+}
 
 /* ----------------------------------------------------------- dashboard */
 function viewDash() {
@@ -694,6 +774,7 @@ function viewSetup() {
 
 /* ------------------------------------------------------------- start up */
 (async function () {
+  await applySettings();
   $('ad-hint').textContent = ONLINE()
     ? 'Sign in with the staff account you created in Supabase.'
     : 'Demo mode: any email works, the password is the one in assets/js/config.js.';

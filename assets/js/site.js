@@ -280,6 +280,7 @@ async function submitLead(e) {
 
 /* -------------------------------------------------------------- startup */
 (async function boot() {
+  await applySettings();
   $('year').textContent = new Date().getFullYear();
   $('bar-phone').textContent = CONFIG.PHONE; $('ft-phone').textContent = CONFIG.PHONE;
   $('bar-mail').textContent = CONFIG.EMAIL; $('ft-mail').textContent = CONFIG.EMAIL;
