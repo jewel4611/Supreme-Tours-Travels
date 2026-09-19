@@ -45,6 +45,7 @@ function renderPackages() {
         <ul class="mt-4 grid gap-1.5 text-[13px] text-[#3A5568]">
           ${inc.slice(0, 3).map(i => `<li class="flex gap-2">${icon('ic-check', 'text-leaf text-[15px] shrink-0 mt-0.5')}<span>${esc(i)}</span></li>`).join('')}
         </ul>
+        <button onclick="openItinerary('${p.id}')" class="mt-2.5 self-start text-[12.5px] font-semibold text-sea hover:text-deep flex items-center gap-1">${t('pk.itin')} ${icon('ic-right', 'text-[12px]')}</button>
         <div class="flex-1"></div>
         <div class="stub-foot mt-5 pt-4 flex items-end justify-between gap-3">
           <div>
@@ -209,6 +210,32 @@ function pickPackage(id) {
   $('planner').scrollIntoView({ behavior: 'smooth' });
 }
 
+/* --------------------------------------------------------- itinerary modal */
+function openItinerary(id) {
+  const p = packages.find(x => x.id === id);
+  if (!p) return;
+  const days = (APP.lang === 'bn' && p.itinerary_bn && p.itinerary_bn.length) ? p.itinerary_bn : (p.itinerary_en || []);
+  const inc = (APP.lang === 'bn' ? (p.inc_bn || p.inc_en) : p.inc_en) || [];
+  const excl = (APP.lang === 'bn' ? (p.excl_bn || p.excl_en) : p.excl_en) || [];
+
+  $('itin-title').textContent = L(p, 'title');
+  $('itin-days').innerHTML = days.length
+    ? days.map((d, i) => `<li class="flex gap-3">
+        <span class="shrink-0 w-7 h-7 rounded-full bg-sea text-white text-[12px] font-bold grid place-items-center">${num(i + 1)}</span>
+        <span class="text-[13.5px] text-[#3A5568] pt-0.5">${esc(d)}</span>
+      </li>`).join('')
+    : `<li class="text-[13.5px] text-[#5C7688]">${t('itin.empty')}</li>`;
+  $('itin-inc').innerHTML = inc.length
+    ? inc.map(i => `<li class="flex gap-2">${icon('ic-check', 'text-leaf text-[14px] shrink-0 mt-0.5')}<span>${esc(i)}</span></li>`).join('')
+    : `<li class="text-[#5C7688]">—</li>`;
+  $('itin-excl').innerHTML = excl.length
+    ? excl.map(i => `<li class="flex gap-2">${icon('ic-x', 'text-[#B4361F] text-[14px] shrink-0 mt-0.5')}<span>${esc(i)}</span></li>`).join('')
+    : `<li class="text-[#5C7688]">—</li>`;
+  $('itin-price-btn').onclick = () => { closeItinerary(); pickPackage(id); };
+  $('itin-modal').classList.remove('hide');
+}
+function closeItinerary() { $('itin-modal').classList.add('hide'); }
+
 /* ---------------------------------------------- wishlist, menu, whatsapp */
 function toggleWish(id) {
   const i = wishlist.indexOf(id);
@@ -309,6 +336,7 @@ async function submitLead(e) {
 
   fillDestSelects(); renderAddons(); setLang(LS.get('lang', 'en'));
   $('c-dest').addEventListener('change', () => { renderAddons(); calc(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeQuote(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeQuote(); closeItinerary(); } });
   $('quote-modal').addEventListener('click', e => { if (e.target.id === 'quote-modal') closeQuote(); });
+  $('itin-modal').addEventListener('click', e => { if (e.target.id === 'itin-modal') closeItinerary(); });
 })();

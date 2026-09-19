@@ -4,12 +4,15 @@
 const TABS = [
   { id: 'dash', name: 'Dashboard' }, { id: 'siteinfo', name: 'Site info' },
   { id: 'quotations', name: 'Quotations' }, { id: 'invoices', name: 'Bills' },
-  { id: 'customers', name: 'Customers' },
+  { id: 'ledger', name: 'Ledger' }, { id: 'customers', name: 'Customers' },
+  { id: 'vendors', name: 'Vendors' }, { id: 'signatories', name: 'Signatories' },
   { id: 'packages', name: 'Packages' }, { id: 'services', name: 'Services' },
-  { id: 'gallery', name: 'Photos' }, { id: 'setup', name: 'Setup' }
+  { id: 'gallery', name: 'Photos' }, { id: 'staff', name: 'Staff accounts' },
+  { id: 'setup', name: 'Setup' }
 ];
-const S = { quotations: [], invoices: [], customers: [], packages: [], services: [], gallery: [] };
-let tab = 'dash', custSearch = '', promoPicked = [];
+const ADMIN_ONLY_TABS = ['siteinfo', 'invoices', 'ledger', 'vendors', 'signatories', 'staff', 'setup'];
+const S = { quotations: [], invoices: [], payments: [], customers: [], vendors: [], vendorLedger: [], signatories: [], staffProfiles: [], packages: [], services: [], gallery: [] };
+let tab = 'dash', custSearch = '', promoPicked = [], ledgerMode = 'customer', currentRole = 'admin';
 
 const STATUS = {
   new: 'bg-[#FFF4D0] text-[#8A6A00]', called: 'bg-[#E4F1F8] text-[#0A6A94]',
@@ -22,6 +25,12 @@ const lines = q => { try { return typeof q.lines === 'string' ? JSON.parse(q.lin
 const items = i => { try { return typeof i.items === 'string' ? JSON.parse(i.items) : (i.items || []); } catch { return []; } };
 
 /* ------------------------------------------------------------- sign in */
+let demoRole = 'admin';
+function pickDemoRole(input) {
+  demoRole = input.value;
+  $('role-admin-opt').classList.toggle('sel', demoRole === 'admin');
+  $('role-staff-opt').classList.toggle('sel', demoRole === 'staff');
+}
 async function signIn(e) {
   e.preventDefault();
   const email = $('ad-email').value.trim(), pass = $('ad-pass').value, err = $('ad-err');
@@ -33,14 +42,37 @@ async function signIn(e) {
     err.textContent = 'Wrong password. In demo mode the password lives in assets/js/config.js.';
     err.classList.remove('hide'); return;
   }
-  LS.set('adm', 1); start();
+  LS.set('adm', 1); LS.set('role', demoRole); start();
 }
 async function signOut() { if (ONLINE()) await sb.auth.signOut(); LS.set('adm', 0); location.reload(); }
 
+/* Everyone with a login has full access (role 'admin') unless a row in
+   staff_profiles says otherwise. See the note in schema.sql — this is a
+   UI-level restriction, not a database-level lock.                     */
+async function resolveRole() {
+  if (!ONLINE()) { currentRole = LS.get('role', 'admin'); return; }
+  try {
+    const { data } = await sb.auth.getUser();
+    const email = data && data.user && data.user.email;
+    if (!email) { currentRole = 'admin'; return; }
+    const rows = await DB.list('staff_profiles', []);
+    const mine = rows.find(r => r.email && r.email.toLowerCase() === email.toLowerCase());
+    if (mine) {
+      currentRole = mine.role || 'staff';
+      if (!mine.user_id) await DB.save('staff_profiles', { ...mine, user_id: data.user.id });
+    } else {
+      currentRole = 'admin';
+    }
+  } catch (e) { console.warn('resolveRole', e); currentRole = 'admin'; }
+}
+
 async function start() {
+  await resolveRole();
   $('login').classList.add('hide'); $('panel').classList.remove('hide');
-  $('mode').textContent = ONLINE() ? 'Supabase connected' : 'Demo mode · this browser only';
-  $('tabs').innerHTML = TABS.map(x => `<button onclick="go('${x.id}')" data-tab="${x.id}"
+  $('mode').textContent = (ONLINE() ? 'Supabase connected' : 'Demo mode · this browser only') + (currentRole === 'staff' ? ' · booking staff' : '');
+  const visible = TABS.filter(x => currentRole === 'admin' || !ADMIN_ONLY_TABS.includes(x.id));
+  if (!visible.some(x => x.id === tab)) tab = 'dash';
+  $('tabs').innerHTML = visible.map(x => `<button onclick="go('${x.id}')" data-tab="${x.id}"
     class="adtab text-[13px] font-semibold px-4 py-2 rounded-lg whitespace-nowrap ${x.id === tab ? 'tab-on' : 'text-white/70 hover:text-white'}">${x.name}</button>`).join('');
   await reload();
   go(tab);
@@ -48,19 +80,26 @@ async function start() {
 async function reload() {
   S.quotations = await DB.list('quotations', []);
   S.invoices = await DB.list('invoices', []);
+  S.payments = await DB.list('payments', []);
   S.customers = await DB.list('customers', []);
+  S.vendors = await DB.list('vendors', []);
+  S.vendorLedger = await DB.list('vendor_ledger', []);
+  S.signatories = await DB.list('signatories', []);
+  S.staffProfiles = await DB.list('staff_profiles', []);
   S.packages = await DB.list('packages', SEED_PACKAGES);
   S.services = await DB.list('services', SEED_SERVICES);
   S.gallery = await DB.list('gallery', SEED_GALLERY);
 }
 function go(id) {
+  if (currentRole !== 'admin' && ADMIN_ONLY_TABS.includes(id)) id = 'dash';
   tab = id;
   document.querySelectorAll('.adtab').forEach(b => {
     const on = b.dataset.tab === id;
     b.className = 'adtab text-[13px] font-semibold px-4 py-2 rounded-lg whitespace-nowrap ' + (on ? 'tab-on' : 'text-white/70 hover:text-white');
   });
-  ({ dash: viewDash, siteinfo: viewSiteInfo, quotations: viewQuotations, invoices: viewInvoices, customers: viewCustomers,
-     packages: viewPackages, services: viewServices, gallery: viewGallery, setup: viewSetup })[id]();
+  ({ dash: viewDash, siteinfo: viewSiteInfo, quotations: viewQuotations, invoices: viewInvoices,
+     ledger: viewLedger, customers: viewCustomers, vendors: viewVendors, signatories: viewSignatories,
+     packages: viewPackages, services: viewServices, gallery: viewGallery, staff: viewStaff, setup: viewSetup })[id]();
 }
 const head = (title, sub, actions = '') => `
   <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
@@ -152,15 +191,255 @@ async function saveSiteInfo(e) {
   } catch (err) { toast('Could not save: ' + err.message); }
 }
 
+/* --------------------------------------------------------------- ledger */
+function customerEntries(id) {
+  return [
+    ...S.invoices.filter(i => i.customer_id === id).map(i => ({
+      date: i.issue_date || i.created_at, desc: 'Invoice ' + (i.doc_no || '') + (i.subject ? ' — ' + i.subject : ''),
+      debit: +i.total_bdt || 0, credit: 0 })),
+    ...S.payments.filter(p => p.customer_id === id).map(p => ({
+      date: p.date || p.created_at, desc: 'Payment received' + (p.note ? ' — ' + p.note : ''),
+      debit: 0, credit: +p.amount || 0 }))
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+function vendorEntries(id) {
+  return S.vendorLedger.filter(e => e.vendor_id === id)
+    .map(e => ({ date: e.date || e.created_at, desc: e.description || '',
+      debit: e.type === 'bill' ? (+e.amount || 0) : 0, credit: e.type === 'payment' ? (+e.amount || 0) : 0, _raw: e }))
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+function withRunningBalance(entries) {
+  let bal = 0;
+  return entries.map(e => { bal += e.debit - e.credit; return { ...e, balance: bal }; });
+}
+function statementTable(rows, vendorIdForDelete) {
+  return `<div class="bg-white rounded-2xl shadow-lift overflow-x-auto">
+    ${rows.length ? `<table class="adm"><thead><tr><th>Date</th><th>Description</th><th>Debit</th><th>Credit</th><th>Balance</th>${vendorIdForDelete ? '<th></th>' : ''}</tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${dt(r.date)}</td><td>${esc(r.desc)}</td>
+        <td>${r.debit ? taka(r.debit) : ''}</td><td>${r.credit ? taka(r.credit) : ''}</td>
+        <td class="font-semibold ${r.balance > 0 ? 'text-[#B4361F]' : ''}">${taka(r.balance)}</td>
+        ${vendorIdForDelete ? `<td><button onclick="delVendorEntry('${r._raw.id}','${vendorIdForDelete}')" class="text-[#B4361F] p-1">${icon('ic-trash', 'text-[15px]')}</button></td>` : ''}
+      </tr>`).join('')}
+    </tbody></table>` : `<p class="p-10 text-center text-[#5C7688] text-[14px]">No transactions yet.</p>`}
+  </div>`;
+}
+function viewLedger() {
+  const toggle = `<div class="flex gap-1 bg-white border border-[#DDE7EC] rounded-xl p-1">
+       <button onclick="ledgerMode='customer';go('ledger')" class="px-3 py-1.5 rounded-lg text-[13px] font-semibold ${ledgerMode === 'customer' ? 'tab-on' : 'text-[#3A5568]'}">Customers</button>
+       <button onclick="ledgerMode='vendor';go('ledger')" class="px-3 py-1.5 rounded-lg text-[13px] font-semibold ${ledgerMode === 'vendor' ? 'tab-on' : 'text-[#3A5568]'}">Vendors</button>
+     </div>`;
+  $('pane').innerHTML = head('Ledger', 'Running balance for every customer and vendor', toggle) +
+    (ledgerMode === 'customer' ? customerLedgerTable() : vendorLedgerTable());
+}
+function customerLedgerTable() {
+  const rows = S.customers.map(c => {
+    const invoiced = S.invoices.filter(i => i.customer_id === c.id).reduce((a, i) => a + (+i.total_bdt || 0), 0);
+    const paid = S.payments.filter(p => p.customer_id === c.id).reduce((a, p) => a + (+p.amount || 0), 0);
+    return { c, invoiced, paid, due: invoiced - paid };
+  }).filter(r => r.invoiced > 0);
+  const totalDue = rows.reduce((a, r) => a + Math.max(0, r.due), 0);
+  return `<div class="stat mb-4 inline-block"><p class="text-[12.5px] text-[#5C7688]">Total receivable</p><p class="font-display font-extrabold text-[24px] text-deep">${taka(totalDue)}</p></div>
+  <div class="bg-white rounded-2xl shadow-lift overflow-x-auto">
+  ${rows.length ? `<table class="adm"><thead><tr><th>Customer</th><th>Invoiced</th><th>Paid</th><th>Balance</th><th></th></tr></thead><tbody>
+    ${rows.map(r => `<tr>
+      <td><strong>${esc(r.c.name)}</strong><br><span class="text-[11.5px] text-[#5C7688]">${esc(r.c.phone)}</span></td>
+      <td>${taka(r.invoiced)}</td><td>${taka(r.paid)}</td>
+      <td class="${r.due > 0 ? 'text-[#B4361F] font-semibold' : ''}">${taka(r.due)}</td>
+      <td><button onclick="viewCustomerStatement('${r.c.id}')" class="text-sea text-[12.5px] font-semibold">Statement</button></td>
+    </tr>`).join('')}</tbody></table>`
+      : `<p class="p-10 text-center text-[#5C7688] text-[14px]">No invoiced customers yet — the ledger fills in as you raise invoices.</p>`}
+  </div>`;
+}
+function vendorLedgerTable() {
+  const rows = S.vendors.map(v => {
+    const entries = S.vendorLedger.filter(e => e.vendor_id === v.id);
+    const billed = entries.filter(e => e.type === 'bill').reduce((a, e) => a + (+e.amount || 0), 0);
+    const paid = entries.filter(e => e.type === 'payment').reduce((a, e) => a + (+e.amount || 0), 0);
+    return { v, billed, paid, due: billed - paid };
+  });
+  const totalDue = rows.reduce((a, r) => a + Math.max(0, r.due), 0);
+  return `<div class="stat mb-4 inline-block"><p class="text-[12.5px] text-[#5C7688]">Total payable</p><p class="font-display font-extrabold text-[24px] text-deep">${taka(totalDue)}</p></div>
+  <div class="bg-white rounded-2xl shadow-lift overflow-x-auto">
+  ${rows.length ? `<table class="adm"><thead><tr><th>Vendor</th><th>Billed</th><th>Paid</th><th>Balance</th><th></th></tr></thead><tbody>
+    ${rows.map(r => `<tr>
+      <td><strong>${esc(r.v.name)}</strong><br><span class="text-[11.5px] text-[#5C7688]">${esc(r.v.phone || '')}</span></td>
+      <td>${taka(r.billed)}</td><td>${taka(r.paid)}</td>
+      <td class="${r.due > 0 ? 'text-[#B4361F] font-semibold' : ''}">${taka(r.due)}</td>
+      <td><button onclick="viewVendorStatement('${r.v.id}')" class="text-sea text-[12.5px] font-semibold">Ledger</button></td>
+    </tr>`).join('')}</tbody></table>`
+      : `<p class="p-10 text-center text-[#5C7688] text-[14px]">No vendors yet — add one from the Vendors tab first.</p>`}
+  </div>`;
+}
+function viewCustomerStatement(id) {
+  const c = S.customers.find(x => x.id === id);
+  const rows = withRunningBalance(customerEntries(id));
+  $('pane').innerHTML = head(`Statement — ${esc(c.name)}`, esc(c.phone),
+    btnGhost('Back to ledger', "go('ledger')", 'ic-users') + btnPrimary('Print statement', `printStatement('customer','${id}')`, 'ic-print')) +
+    statementTable(rows);
+}
+
+/* --------------------------------------------------------------- vendors */
+const VENDOR_CATS = { ticketing: 'Ticketing / airline', hotel: 'Hotel', visa: 'Visa agent', transport: 'Transport', other: 'Other' };
+function viewVendors() {
+  $('pane').innerHTML = head('Vendors', `${S.vendors.length} on file — airlines, hotels, visa agents and other suppliers you pay`, btnPrimary('Add vendor', 'editVendor()')) +
+    `<div class="grid gap-3">${S.vendors.map(v => {
+      const entries = S.vendorLedger.filter(e => e.vendor_id === v.id);
+      const due = entries.filter(e => e.type === 'bill').reduce((a, e) => a + (+e.amount || 0), 0) - entries.filter(e => e.type === 'payment').reduce((a, e) => a + (+e.amount || 0), 0);
+      return `<div class="bg-white rounded-2xl p-4 shadow-lift flex flex-wrap items-center gap-4">
+        <span class="w-11 h-11 rounded-xl bg-sand text-deep grid place-items-center shrink-0">${icon('ic-building', 'text-[20px]')}</span>
+        <div class="flex-1 min-w-[200px]">
+          <p class="font-bold text-[14.5px]">${esc(v.name)} <span class="chip bg-[#E4F1F8] text-[#0A6A94] ml-1">${esc(VENDOR_CATS[v.category] || v.category)}</span></p>
+          <p class="text-[12.5px] text-[#5C7688]">${esc(v.phone || '')}${v.email ? ' · ' + esc(v.email) : ''}</p>
+        </div>
+        <div class="text-right">
+          <p class="text-[11.5px] text-[#5C7688]">We owe</p>
+          <p class="font-bold ${due > 0 ? 'text-[#B4361F]' : ''}">${taka(due)}</p>
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="viewVendorStatement('${v.id}')" title="Ledger" class="p-2.5 rounded-lg hover:bg-paper text-sea">${icon('ic-chart', 'text-[17px]')}</button>
+          <button onclick="editVendor('${v.id}')" title="Edit" class="p-2.5 rounded-lg hover:bg-paper text-[#3A5568]">${icon('ic-edit', 'text-[17px]')}</button>
+          <button onclick="del('vendors','${v.id}')" title="Delete" class="p-2.5 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[17px]')}</button>
+        </div></div>`;
+    }).join('') || `<p class="text-[#5C7688] text-[14px]">No vendors yet — add the hotels, airlines and visa agents you regularly pay.</p>`}</div>`;
+}
+function editVendor(id) {
+  const v = S.vendors.find(x => x.id === id) || { category: 'ticketing' };
+  openEditor(id ? 'Edit vendor' : 'New vendor', [
+    { k: 'name', label: 'Vendor name', v: v.name, req: true, half: true },
+    { k: 'category', label: 'Category', v: v.category, type: 'select', half: true, opts: Object.entries(VENDOR_CATS).map(([k, l]) => [k, l]) },
+    { k: 'phone', label: 'Phone', v: v.phone, half: true },
+    { k: 'email', label: 'Email', v: v.email, half: true },
+    { k: 'address', label: 'Address', v: v.address },
+    { k: 'notes', label: 'Notes', v: v.notes, type: 'textarea' }
+  ], async d => {
+    await DB.save('vendors', { ...v, ...d, id: v.id || uid(), created_at: v.created_at || new Date().toISOString() });
+    await reload(); viewVendors(); toast('Vendor saved');
+  });
+}
+function viewVendorStatement(id) {
+  const v = S.vendors.find(x => x.id === id);
+  const rows = withRunningBalance(vendorEntries(id));
+  $('pane').innerHTML = head(`Ledger — ${esc(v.name)}`, esc(v.phone || ''),
+    btnGhost('Back to vendors', "go('vendors')", 'ic-building') +
+    btnGhost('Add a bill', `addVendorEntry('${id}','bill')`, 'ic-plus') +
+    btnPrimary('Record a payment', `addVendorEntry('${id}','payment')`, 'ic-cash') +
+    btnGhost('Print statement', `printStatement('vendor','${id}')`, 'ic-print')) +
+    statementTable(rows, id);
+}
+function addVendorEntry(vendorId, type) {
+  openEditor(type === 'bill' ? 'Add a bill' : 'Record a payment', [
+    { k: 'date', label: 'Date', v: new Date().toISOString().slice(0, 10), type: 'date', half: true },
+    { k: 'amount', label: 'Amount (৳)', v: 0, type: 'number', half: true },
+    { k: 'description', label: 'Description', v: '', ph: type === 'bill' ? 'e.g. 4 air tickets, Dhaka–Bangkok' : 'e.g. bKash transfer' }
+  ], async d => {
+    await DB.save('vendor_ledger', { id: uid(), vendor_id: vendorId, type, date: d.date, amount: +d.amount, description: d.description, created_at: new Date().toISOString() });
+    await reload(); viewVendorStatement(vendorId); toast('Saved');
+  });
+}
+async function delVendorEntry(entryId, vendorId) {
+  if (!confirm('Delete this entry?')) return;
+  await DB.remove('vendor_ledger', entryId);
+  await reload(); viewVendorStatement(vendorId); toast('Deleted');
+}
+
+/* ----------------------------------------------------------- signatories */
+function viewSignatories() {
+  $('pane').innerHTML = head('Signatories', 'People authorised to sign quotations and invoices, with their saved signature', btnPrimary('Add signatory', 'editSignatory()')) +
+    `<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${S.signatories.map(s => `
+      <div class="bg-white rounded-2xl p-5 shadow-lift">
+        <div class="h-16 flex items-end mb-3">${s.signature ? `<img src="${esc(s.signature)}" class="max-h-16 object-contain" alt="signature">` : `<span class="text-[12px] text-[#5C7688]">No signature uploaded</span>`}</div>
+        <p class="font-bold text-[14.5px]">${esc(s.name)}</p>
+        <p class="text-[12.5px] text-[#5C7688]">${esc(s.designation || '')}</p>
+        <div class="flex gap-1.5 mt-3">
+          <button onclick="editSignatory('${s.id}')" class="p-2 rounded-lg hover:bg-paper text-sea">${icon('ic-edit', 'text-[16px]')}</button>
+          <button onclick="del('signatories','${s.id}')" class="p-2 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[16px]')}</button>
+        </div>
+      </div>`).join('') || `<p class="text-[#5C7688] text-[14px] sm:col-span-2 lg:col-span-3">No one added yet. Add whoever is authorised to sign — the owner, a manager, whoever countersigns invoices.</p>`}</div>`;
+}
+function editSignatory(id) {
+  const s = S.signatories.find(x => x.id === id) || {};
+  openEditor(id ? 'Edit signatory' : 'New signatory', [
+    { k: 'name', label: 'Name', v: s.name, req: true, half: true },
+    { k: 'designation', label: 'Designation', v: s.designation, half: true, ph: 'Managing Director' },
+    { k: 'signature', label: 'Signature image', v: s.signature, type: 'image', hint: 'A clear photo of their pen signature on plain paper, cropped close, works well.' }
+  ], async d => {
+    await DB.save('signatories', { ...s, ...d, id: s.id || uid(), created_at: s.created_at || new Date().toISOString() });
+    await reload(); viewSignatories(); toast('Saved');
+  });
+}
+
+/* ------------------------------------------------------------ staff accounts */
+function viewStaff() {
+  $('pane').innerHTML = head('Staff accounts', 'Everyone who signs in has full access by default — add someone here as "Booking staff" to hide money and settings screens from their login', btnPrimary('Add staff account', 'editStaffRow()')) +
+    (ONLINE() ? '' : `<div class="bg-white rounded-2xl shadow-lift p-4 mb-4 text-[13px] text-[#5C7688]">Demo mode: this list is for reference. To actually try a booking-staff login, sign out and pick "Booking staff" on the sign-in screen.</div>`) +
+    `<div class="bg-white rounded-2xl shadow-lift overflow-x-auto">
+    ${S.staffProfiles.length ? `<table class="adm"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr></thead><tbody>
+      ${S.staffProfiles.map(s => `<tr>
+        <td><strong>${esc(s.name || '—')}</strong></td>
+        <td>${esc(s.email)}</td>
+        <td><span class="chip ${s.role === 'admin' ? 'bg-[#E4F1F8] text-[#0A6A94]' : 'bg-[#FFF4D0] text-[#8A6A00]'}">${s.role === 'admin' ? 'Full access' : 'Booking staff'}</span></td>
+        <td><div class="flex gap-1">
+          <button onclick="editStaffRow('${s.id}')" class="p-2 rounded-lg hover:bg-paper text-sea">${icon('ic-edit', 'text-[16px]')}</button>
+          <button onclick="del('staff_profiles','${s.id}')" class="p-2 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[16px]')}</button>
+        </div></td>
+      </tr>`).join('')}</tbody></table>`
+      : `<p class="p-10 text-center text-[#5C7688] text-[14px]">No one added yet. Everyone who signs in currently has full access.</p>`}
+    </div>
+    <div class="bg-white rounded-2xl shadow-lift p-5 mt-4 max-w-[70ch]">
+      <h2 class="font-display font-bold text-[15px] mb-2">How to add a booking-staff login</h2>
+      <ol class="text-[13px] text-[#3A5568] grid gap-1.5 list-decimal pl-4 leading-relaxed">
+        <li>In Supabase → Authentication → Users, create a login for that person (email and a password you give them).</li>
+        <li>Come back here and add their email with the role "Booking staff".</li>
+        <li>The first time they sign in, this row links itself to their account automatically. From then on they see Dashboard, Quotations, Customers, Packages, Services and Photos only.</li>
+      </ol>
+    </div>`;
+}
+function editStaffRow(id) {
+  const s = S.staffProfiles.find(x => x.id === id) || { role: 'staff' };
+  openEditor(id ? 'Edit staff account' : 'Add staff account', [
+    { k: 'email', label: 'Email (must match their Supabase login)', v: s.email, req: true, half: true },
+    { k: 'name', label: 'Name', v: s.name, half: true },
+    { k: 'role', label: 'Access level', v: s.role, type: 'select', opts: [['staff', 'Booking staff — hides Bills, Ledger, Vendors, Signatories, Site info, Setup'], ['admin', 'Full access']] }
+  ], async d => {
+    await DB.save('staff_profiles', { ...s, ...d, id: s.id || uid(), created_at: s.created_at || new Date().toISOString() });
+    await reload(); viewStaff(); toast('Saved');
+  });
+}
+
 /* ----------------------------------------------------------- dashboard */
 function viewDash() {
   const now = new Date(), month = now.getMonth(), year = now.getFullYear();
   const thisMonth = r => { const d = new Date(r.created_at); return d.getMonth() === month && d.getFullYear() === year; };
+  const fresh = S.quotations.filter(q => q.status === 'new');
+
+  if (currentRole !== 'admin') {
+    $('pane').innerHTML = head('Dashboard', dt(now)) + `
+      <div class="grid sm:grid-cols-2 gap-4 mb-7">
+        ${[['Quotes waiting', fresh.length, fresh.length ? 'Call these first' : 'All followed up'],
+           ['Customers on file', S.customers.length, 'Reachable on WhatsApp']]
+          .map(([l, v, s]) => `<div class="stat"><p class="text-[12.5px] text-[#5C7688]">${l}</p>
+            <p class="font-display font-extrabold text-[26px] text-deep mt-1">${v}</p>
+            <p class="text-[12px] text-[#5C7688] mt-0.5">${s}</p></div>`).join('')}
+      </div>
+      <div class="bg-white rounded-2xl shadow-lift p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-bold text-[16px]">Latest quote requests</h2>
+          ${btnPrimary('New quotation', 'editQuotation()', 'ic-doc')}
+        </div>
+        ${S.quotations.length ? `<table class="adm"><tbody>${S.quotations.slice(0, 8).map(q => `<tr>
+          <td><strong>${esc(q.name)}</strong><br><span class="text-[11.5px] text-[#5C7688]">${esc(q.doc_no || '')} · ${dt(q.created_at)}</span></td>
+          <td>${esc(q.package || '')}</td>
+          <td>${chip(q.status || 'new')}</td>
+          <td><a class="text-[#1FA855] font-semibold" target="_blank" href="${waLink(q.phone, waQuoteText(q))}">WhatsApp</a></td>
+        </tr>`).join('')}</tbody></table>`
+        : `<p class="text-[13.5px] text-[#5C7688] py-6 text-center">Nothing yet. Requests land here the moment someone finishes the price planner.</p>`}
+      </div>`;
+    return;
+  }
+
   const paid = S.invoices.filter(i => i.status === 'paid');
   const revenue = S.invoices.filter(thisMonth).reduce((a, i) => a + (+i.paid_bdt || 0), 0);
   const due = S.invoices.reduce((a, i) => a + Math.max(0, (+i.total_bdt || 0) - (+i.paid_bdt || 0)), 0);
-  const fresh = S.quotations.filter(q => q.status === 'new');
-  const conv = S.quotations.length ? Math.round(S.invoices.length / S.quotations.length * 100) : 0;
 
   $('pane').innerHTML = head('Dashboard', dt(now)) + `
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
@@ -220,9 +499,9 @@ function viewQuotations() {
         <td><select onchange="setStatus('quotations','${q.id}',this.value)" class="chip ${STATUS[q.status] || STATUS.new} border-0">
           ${['new', 'called', 'confirmed', 'lost'].map(s => `<option ${q.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
         <td><div class="flex gap-1">
+          <button onclick="previewQuotation('${q.id}')" title="Preview" class="p-2 rounded-lg hover:bg-paper text-deep">${icon('ic-eye', 'text-[17px]')}</button>
           <a target="_blank" href="${waLink(q.phone, waQuoteText(q))}" title="WhatsApp" class="p-2 rounded-lg hover:bg-paper text-[#1FA855]">${icon('ic-wa', 'i-fill text-[17px]')}</a>
-          <button onclick="printQuotation('${q.id}')" title="Print or PDF" class="p-2 rounded-lg hover:bg-paper text-deep">${icon('ic-print', 'text-[17px]')}</button>
-          <button onclick="invoiceFromQuote('${q.id}')" title="Turn into an invoice" class="p-2 rounded-lg hover:bg-paper text-sea">${icon('ic-cash', 'text-[17px]')}</button>
+          ${currentRole === 'admin' ? `<button onclick="invoiceFromQuote('${q.id}')" title="Turn into an invoice" class="p-2 rounded-lg hover:bg-paper text-sea">${icon('ic-cash', 'text-[17px]')}</button>` : ''}
           <button onclick="editQuotation('${q.id}')" title="Edit" class="p-2 rounded-lg hover:bg-paper text-[#3A5568]">${icon('ic-edit', 'text-[17px]')}</button>
           <button onclick="del('quotations','${q.id}')" title="Delete" class="p-2 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[17px]')}</button>
         </div></td></tr>`).join('')}</tbody></table>`
@@ -256,8 +535,9 @@ function viewInvoices() {
         <td>${chip(v.status || 'unpaid')}</td>
         <td><div class="flex gap-1">
           <button onclick="recordPayment('${v.id}')" title="Record a payment" class="p-2 rounded-lg hover:bg-paper text-leaf">${icon('ic-cash', 'text-[17px]')}</button>
+          <button onclick="previewBooking('${v.id}')" title="Booking confirmation" class="p-2 rounded-lg hover:bg-paper text-leaf">${icon('ic-check', 'text-[17px]')}</button>
+          <button onclick="previewInvoice('${v.id}')" title="Preview invoice" class="p-2 rounded-lg hover:bg-paper text-deep">${icon('ic-eye', 'text-[17px]')}</button>
           <a target="_blank" href="${waLink(v.phone, waInvoiceText(v))}" title="WhatsApp" class="p-2 rounded-lg hover:bg-paper text-[#1FA855]">${icon('ic-wa', 'i-fill text-[17px]')}</a>
-          <button onclick="printInvoice('${v.id}')" title="Print or PDF" class="p-2 rounded-lg hover:bg-paper text-deep">${icon('ic-print', 'text-[17px]')}</button>
           <button onclick="editInvoice('${v.id}')" title="Edit" class="p-2 rounded-lg hover:bg-paper text-[#3A5568]">${icon('ic-edit', 'text-[17px]')}</button>
           <button onclick="del('invoices','${v.id}')" title="Delete" class="p-2 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[17px]')}</button>
         </div></td></tr>`; }).join('')}</tbody></table>`
@@ -270,9 +550,14 @@ async function recordPayment(id) {
   const due = (+v.total_bdt || 0) - (+v.paid_bdt || 0);
   const amt = prompt(`How much did ${v.name} pay just now?  (due ${taka(due)})`, String(due));
   if (amt === null) return;
-  const paid = (+v.paid_bdt || 0) + (+amt || 0);
-  const status = paid >= (+v.total_bdt || 0) ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
-  await DB.save('invoices', { ...v, paid_bdt: paid, status, paid_at: new Date().toISOString() });
+  const amount = +amt || 0;
+  const paidTotal = (+v.paid_bdt || 0) + amount;
+  const status = paidTotal >= (+v.total_bdt || 0) ? 'paid' : paidTotal > 0 ? 'partial' : 'unpaid';
+  await DB.save('invoices', { ...v, paid_bdt: paidTotal, status, paid_at: new Date().toISOString() });
+  if (amount) {
+    await DB.save('payments', { id: uid(), invoice_id: v.id, customer_id: v.customer_id || null,
+      amount, date: new Date().toISOString().slice(0, 10), note: null, created_at: new Date().toISOString() });
+  }
   if (status === 'paid' && v.customer_id) {
     const c = S.customers.find(x => x.id === v.customer_id);
     if (c) await DB.save('customers', { ...c, bookings: (c.bookings || 0) + 1, spent_bdt: (c.spent_bdt || 0) + (+v.total_bdt || 0) });
@@ -444,7 +729,7 @@ const ICONS = ['ic-plane', 'ic-passport', 'ic-bed', 'ic-shield', 'ic-headset', '
 function fieldHTML(f) {
   if (f.type === 'hr') return `<hr class="border-[#E2EAEF] my-1">`;
   if (f.type === 'items') return `<div><label class="lbl">${f.label}</label><div id="ed-items"></div></div>`;
-  if (f.type === 'textarea') return `<div><label class="lbl">${f.label}</label><textarea name="${f.k}" rows="${f.rows || 2}" class="field">${esc(f.v || '')}</textarea></div>`;
+  if (f.type === 'textarea') return `<div><label class="lbl">${f.label}</label><textarea name="${f.k}" rows="${f.rows || 2}" class="field" ${f.ph ? `placeholder="${esc(f.ph)}"` : ''}>${esc(f.v || '')}</textarea></div>`;
   if (f.type === 'select') return `<div><label class="lbl">${f.label}</label><select name="${f.k}" class="field">${f.opts.map(o => `<option value="${o[0]}" ${String(f.v) === String(o[0]) ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></div>`;
   if (f.type === 'image') return `<div><label class="lbl">${f.label}</label>
       <div class="flex gap-2 items-center">
@@ -538,6 +823,11 @@ function editInvoice(id, prefill) {
     { k: 'address', label: 'Billing address', v: v.address },
     { k: 'issue_date', label: 'Invoice date', v: v.issue_date || today, type: 'date', half: true },
     { k: 'due_date', label: 'Payment due by', v: v.due_date, type: 'date', half: true },
+    { k: 'travel_date', label: 'Travel date (for the booking confirmation)', v: v.travel_date, type: 'date', half: true },
+    { k: 'hotel_name', label: 'Hotel (name, confirmation number)', v: v.hotel_name, type: 'textarea', rows: 2 },
+    { k: 'flight_details', label: 'Flight / transit details', v: v.flight_details, type: 'textarea', rows: 2 },
+    { k: 'emergency_name', label: 'Emergency contact name', v: v.emergency_name, half: true, ph: 'Left blank uses ' + CONFIG.COMPANY },
+    { k: 'emergency_phone', label: 'Emergency contact phone', v: v.emergency_phone, half: true, ph: 'Left blank uses ' + CONFIG.PHONE },
     { k: 'items', label: 'Line items (description, qty, rate)', type: 'items' },
     { k: 'discount', label: 'Discount (৳)', v: v.discount || 0, type: 'number', half: true },
     { k: 'paid_bdt', label: 'Amount already paid (৳)', v: v.paid_bdt || 0, type: 'number', half: true },
@@ -579,7 +869,7 @@ function editCustomer(id) {
 
 /* catalogue ------------------------------------------------------------- */
 function editPackage(id) {
-  const p = S.packages.find(x => x.id === id) || { cat: 'domestic', nights: 3, base: 2500, flight: 8000, from: 12000, rating: 4.7, hue: 198, inc_en: [], inc_bn: [] };
+  const p = S.packages.find(x => x.id === id) || { cat: 'domestic', nights: 3, base: 2500, flight: 8000, from: 12000, rating: 4.7, hue: 198, inc_en: [], inc_bn: [], excl_en: [], excl_bn: [], itinerary_en: [], itinerary_bn: [] };
   openEditor(id ? 'Edit package' : 'New package', [
     { k: 'title_en', label: 'Title (English)', v: p.title_en, req: true, half: true },
     { k: 'title_bn', label: 'শিরোনাম (বাংলা)', v: p.title_bn, half: true },
@@ -593,11 +883,17 @@ function editPackage(id) {
     { k: 'rating', label: 'Rating out of 5', v: p.rating, type: 'number', half: true },
     { k: 'img', label: 'Cover photo', v: p.img, type: 'image', hint: 'Leave empty to use the generated artwork.' },
     { k: 'inc_en', label: 'What is included (English, one per line)', v: (p.inc_en || []).join('\n'), type: 'textarea', rows: 3 },
-    { k: 'inc_bn', label: 'যা যা থাকছে (বাংলা, প্রতি লাইনে একটি)', v: (p.inc_bn || []).join('\n'), type: 'textarea', rows: 3 }
+    { k: 'inc_bn', label: 'যা যা থাকছে (বাংলা, প্রতি লাইনে একটি)', v: (p.inc_bn || []).join('\n'), type: 'textarea', rows: 3 },
+    { k: 'excl_en', label: 'What is NOT included (English, one per line)', v: (p.excl_en || []).join('\n'), type: 'textarea', rows: 3, ph: 'Lunch and dinner unless added\nPersonal expenses' },
+    { k: 'excl_bn', label: 'যা থাকছে না (বাংলা, প্রতি লাইনে একটি)', v: (p.excl_bn || []).join('\n'), type: 'textarea', rows: 3 },
+    { k: 'itinerary_en', label: 'Day-by-day itinerary (English, one line per day, in order)', v: (p.itinerary_en || []).join('\n'), type: 'textarea', rows: 5, ph: 'Arrive, check in, evening at the beach\nFull day sightseeing tour\nFree morning, checkout, return journey' },
+    { k: 'itinerary_bn', label: 'দিনভিত্তিক ভ্রমণসূচী (বাংলা, প্রতি লাইনে একটি দিন)', v: (p.itinerary_bn || []).join('\n'), type: 'textarea', rows: 5 }
   ], async d => {
     await DB.save('packages', { ...p, ...d, id: p.id || slug(d.title_en), created_at: p.created_at || new Date().toISOString(),
       nights: +d.nights, base: +d.base, flight: +d.flight, from: +d.from, rating: +d.rating,
-      inc_en: d.inc_en.split('\n').filter(Boolean), inc_bn: d.inc_bn.split('\n').filter(Boolean) });
+      inc_en: d.inc_en.split('\n').filter(Boolean), inc_bn: d.inc_bn.split('\n').filter(Boolean),
+      excl_en: d.excl_en.split('\n').filter(Boolean), excl_bn: d.excl_bn.split('\n').filter(Boolean),
+      itinerary_en: d.itinerary_en.split('\n').filter(Boolean), itinerary_bn: d.itinerary_bn.split('\n').filter(Boolean) });
     await reload(); viewPackages(); toast('Package saved');
   });
 }
@@ -647,9 +943,8 @@ function csv(table) {
   a.click();
 }
 
-/* ------------------------------------------- printable documents (PDF) */
-function docShell(kind, d, rows, totals, footNote) {
-  return `<div class="sheet">
+function docShell(kind, d, rows, totals, footNote, sig) {
+  return `<div class="doc-sheet">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:3px solid #0A6A94;padding-bottom:16px">
       <div style="display:flex;gap:12px;align-items:center">
         <svg viewBox="0 0 400 300" style="width:74px;height:56px"><use href="#brandmark"/></svg>
@@ -695,9 +990,16 @@ function docShell(kind, d, rows, totals, footNote) {
     <div style="margin-top:26px;font-size:11.5px;color:#4A6373;line-height:1.6;border-top:1px solid #E6EDF1;padding-top:12px">
       ${esc(footNote || '')}
     </div>
-    <div style="display:flex;justify-content:space-between;margin-top:46px;font-size:11.5px;color:#4A6373">
-      <div style="border-top:1px solid #9FB3BF;padding-top:6px;width:200px">Customer signature</div>
-      <div style="border-top:1px solid #9FB3BF;padding-top:6px;width:200px;text-align:right">For ${esc(CONFIG.COMPANY)}</div>
+    <div style="display:flex;justify-content:space-between;margin-top:${sig ? 18 : 46}px;font-size:11.5px;color:#4A6373">
+      <div style="width:200px">
+        <div style="border-top:1px solid #9FB3BF;padding-top:6px">Customer signature</div>
+      </div>
+      <div style="width:200px;text-align:right">
+        ${sig && sig.signature ? `<img src="${esc(sig.signature)}" style="height:46px;object-fit:contain;margin-left:auto;display:block;margin-bottom:4px">` : '<div style="height:46px"></div>'}
+        <div style="border-top:1px solid #9FB3BF;padding-top:6px">
+          ${sig ? `<strong>${esc(sig.name)}</strong>${sig.designation ? '<br>' + esc(sig.designation) : ''}<br>` : ''}For ${esc(CONFIG.COMPANY)}
+        </div>
+      </div>
     </div>
   </div>`;
 }
@@ -711,30 +1013,173 @@ function rowsHTML(list) {
 const totalRow = (l, v, bold) => `<tr><td style="border:0;padding:5px 6px;${bold ? 'font-weight:700' : 'color:#4A6373'}">${l}</td>
   <td class="right" style="border:0;padding:5px 6px;${bold ? 'font-weight:800;font-size:15px;color:#064A68' : ''}">${v}</td></tr>`;
 
-function paper(html) {
-  $('doc').innerHTML = html;
-  document.body.classList.add('printing');
-  window.print();
-  setTimeout(() => document.body.classList.remove('printing'), 600);
-}
-function printQuotation(id) {
-  const q = S.quotations.find(x => x.id === id);
+function quotationDoc(q, sigId) {
   const ls = lines(q);
-  paper(docShell('QUOTATION', q, rowsHTML(ls.length ? ls : [{ label: q.package || 'Tour package', amount: q.total_bdt }]),
+  const sig = S.signatories.find(s => s.id === sigId);
+  return docShell('QUOTATION', q, rowsHTML(ls.length ? ls : [{ label: q.package || 'Tour package', amount: q.total_bdt }]),
     totalRow('Total', taka(q.total_bdt), true) + totalRow('Valid for', '14 days from the date above'),
-    'This quotation covers the services listed above only. Air fares and hotel rates are held for 14 days and are subject to availability at the time of confirmation. Government taxes and our service charge are included.'));
+    'This quotation covers the services listed above only. Air fares and hotel rates are held for 14 days and are subject to availability at the time of confirmation. Government taxes and our service charge are included.',
+    sig);
 }
-function printInvoice(id) {
-  const v = S.invoices.find(x => x.id === id);
+function invoiceDoc(v, sigId) {
   const due = (+v.total_bdt || 0) - (+v.paid_bdt || 0);
-  paper(docShell('INVOICE', v, rowsHTML(items(v)),
+  const sig = S.signatories.find(s => s.id === sigId);
+  return docShell('INVOICE', v, rowsHTML(items(v)),
     totalRow('Subtotal', taka(v.subtotal_bdt)) +
     (v.vat_bdt ? totalRow('VAT ' + CONFIG.VAT_PERCENT + '%', taka(v.vat_bdt)) : '') +
     (v.discount ? totalRow('Discount', '− ' + taka(v.discount)) : '') +
     totalRow('Total', taka(v.total_bdt), true) +
     totalRow('Paid', taka(v.paid_bdt)) +
     totalRow('Balance due', taka(due), true),
-    v.note || ''));
+    v.note || '', sig);
+}
+function bookingShell(d, sig) {
+  return `<div class="doc-sheet">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:3px solid #2F6A4E;padding-bottom:16px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <svg viewBox="0 0 400 300" style="width:74px;height:56px"><use href="#brandmark"/></svg>
+        <div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#064A68">${esc(CONFIG.COMPANY)}</div>
+          <div style="font-size:11px;color:#4A6373;margin-top:2px">${esc(CONFIG.ADDRESS_EN)}</div>
+          <div style="font-size:11px;color:#4A6373">${esc(CONFIG.PHONE)} · ${esc(CONFIG.EMAIL)}</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:21px;letter-spacing:.5px;color:#2F6A4E">BOOKING CONFIRMED</div>
+        <div style="font-size:12.5px;font-weight:700;color:#0A6A94">${esc(d.doc_no || '')}</div>
+        <div style="font-size:11.5px;color:#4A6373;margin-top:4px">Issued ${dt(new Date())}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;gap:24px;margin:20px 0 14px">
+      <div>
+        <div style="font-size:11px;color:#7A8E9B;margin-bottom:3px">Traveller</div>
+        <div style="font-weight:700;font-size:14.5px">${esc(d.name || '')}</div>
+        <div style="font-size:12.5px;color:#4A6373">${esc(d.phone || '')}</div>
+        ${d.email ? `<div style="font-size:12.5px;color:#4A6373">${esc(d.email)}</div>` : ''}
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:#7A8E9B;margin-bottom:3px">Trip</div>
+        <div style="font-weight:600;font-size:13.5px">${esc(d.subject || d.package || '')}</div>
+        ${d.travel_date ? `<div style="font-size:12.5px;color:#4A6373">Departs ${dt(d.travel_date)}</div>` : ''}
+        ${d.pax ? `<div style="font-size:12.5px;color:#4A6373">${d.pax} adults${d.children ? ' + ' + d.children + ' children' : ''} · ${d.nights || 0} nights</div>` : ''}
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px">
+      <div style="background:#F1F8FB;border-radius:10px;padding:14px 16px">
+        <div style="font-size:11px;font-weight:700;color:#0A6A94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Hotel</div>
+        <div style="font-size:13.5px;white-space:pre-line">${esc(d.hotel_name || 'To be confirmed')}</div>
+      </div>
+      <div style="background:#F1F8FB;border-radius:10px;padding:14px 16px">
+        <div style="font-size:11px;font-weight:700;color:#0A6A94;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Flight / transit</div>
+        <div style="font-size:13.5px;white-space:pre-line">${esc(d.flight_details || 'To be confirmed')}</div>
+      </div>
+    </div>
+
+    <div style="background:#FFF4D0;border-radius:10px;padding:14px 16px;margin-top:16px">
+      <div style="font-size:11px;font-weight:700;color:#8A6A00;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Emergency contact during the trip</div>
+      <div style="font-size:13.5px">${esc(d.emergency_name || CONFIG.COMPANY)} · ${esc(d.emergency_phone || CONFIG.PHONE)}</div>
+    </div>
+
+    <div style="margin-top:20px;font-size:11.5px;color:#4A6373;line-height:1.6;border-top:1px solid #E6EDF1;padding-top:12px">
+      This confirms your booking with ${esc(CONFIG.COMPANY)}. Please carry a printed or saved copy of this confirmation and a valid photo ID, and arrive at least 2 hours before an international flight or 1 hour before a domestic one. Contact us immediately if any detail above needs correcting.
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:${sig ? 18 : 40}px;font-size:11.5px;color:#4A6373">
+      <div style="width:200px"></div>
+      <div style="width:200px;text-align:right">
+        ${sig && sig.signature ? `<img src="${esc(sig.signature)}" style="height:46px;object-fit:contain;margin-left:auto;display:block;margin-bottom:4px">` : '<div style="height:46px"></div>'}
+        <div style="border-top:1px solid #9FB3BF;padding-top:6px">
+          ${sig ? `<strong>${esc(sig.name)}</strong>${sig.designation ? '<br>' + esc(sig.designation) : ''}<br>` : ''}For ${esc(CONFIG.COMPANY)}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function bookingDoc(v, sigId) { return bookingShell(v, S.signatories.find(s => s.id === sigId)); }
+function printBooking(id, sigId) {
+  const v = S.invoices.find(x => x.id === id);
+  paper(bookingDoc(v, sigId !== undefined ? sigId : v.signatory_id));
+}
+function previewBooking(id) { openPreview(S.invoices.find(x => x.id === id), bookingDoc, 'invoices'); }
+
+function statementDoc(title, party, rows, closingBalance) {
+  return `<div class="doc-sheet">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:3px solid #0A6A94;padding-bottom:16px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <svg viewBox="0 0 400 300" style="width:74px;height:56px"><use href="#brandmark"/></svg>
+        <div>
+          <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;color:#064A68">${esc(CONFIG.COMPANY)}</div>
+          <div style="font-size:11px;color:#4A6373;margin-top:2px">${esc(CONFIG.ADDRESS_EN)}</div>
+          <div style="font-size:11px;color:#4A6373">${esc(CONFIG.PHONE)} · ${esc(CONFIG.EMAIL)}</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;letter-spacing:.5px">${esc(title)}</div>
+        <div style="font-size:11.5px;color:#4A6373;margin-top:4px">As of ${dt(new Date())}</div>
+      </div>
+    </div>
+    <div style="margin:18px 0 14px">
+      <div style="font-size:11px;color:#7A8E9B;margin-bottom:3px">${title.includes('VENDOR') ? 'Vendor' : 'Customer'}</div>
+      <div style="font-weight:700;font-size:14.5px">${esc((party && party.name) || '')}</div>
+      <div style="font-size:12.5px;color:#4A6373">${esc((party && party.phone) || '')}</div>
+    </div>
+    <table><thead><tr><th>Date</th><th>Description</th><th class="right" style="width:100px">Debit</th><th class="right" style="width:100px">Credit</th><th class="right" style="width:110px">Balance</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${dt(r.date)}</td><td>${esc(r.desc)}</td>
+        <td class="right">${r.debit ? taka(r.debit) : ''}</td><td class="right">${r.credit ? taka(r.credit) : ''}</td>
+        <td class="right">${taka(r.balance)}</td></tr>`).join('')}</tbody></table>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px">
+      <table style="width:280px">${totalRow('Closing balance', taka(closingBalance), true)}</table>
+    </div>
+  </div>`;
+}
+
+function paper(html) {
+  $('doc').innerHTML = html;
+  document.body.classList.add('printing');
+  window.print();
+  setTimeout(() => document.body.classList.remove('printing'), 600);
+}
+function printQuotation(id, sigId) {
+  const q = S.quotations.find(x => x.id === id);
+  paper(quotationDoc(q, sigId !== undefined ? sigId : q.signatory_id));
+}
+function printInvoice(id, sigId) {
+  const v = S.invoices.find(x => x.id === id);
+  paper(invoiceDoc(v, sigId !== undefined ? sigId : v.signatory_id));
+}
+function printStatement(kind, id) {
+  const isVendor = kind === 'vendor';
+  const party = isVendor ? S.vendors.find(x => x.id === id) : S.customers.find(x => x.id === id);
+  const rows = withRunningBalance(isVendor ? vendorEntries(id) : customerEntries(id));
+  const closing = rows.length ? rows[rows.length - 1].balance : 0;
+  paper(statementDoc(isVendor ? 'VENDOR STATEMENT' : 'STATEMENT OF ACCOUNT', party, rows, closing));
+}
+
+/* -------------------------------------------------------- live preview */
+let pvState = null;
+function previewQuotation(id) { openPreview(S.quotations.find(x => x.id === id), quotationDoc, 'quotations'); }
+function previewInvoice(id) { openPreview(S.invoices.find(x => x.id === id), invoiceDoc, 'invoices'); }
+function openPreview(doc, buildFn, table) {
+  pvState = { doc, buildFn, table, sigId: doc.signatory_id || '' };
+  renderPreview();
+  $('preview').classList.remove('hide');
+}
+function renderPreview() {
+  $('preview-sig').innerHTML = `<option value="">No signature block</option>` +
+    S.signatories.map(s => `<option value="${s.id}" ${pvState.sigId === s.id ? 'selected' : ''}>${esc(s.name)}${s.designation ? ' — ' + esc(s.designation) : ''}</option>`).join('');
+  $('preview-body').innerHTML = pvState.buildFn(pvState.doc, pvState.sigId);
+}
+function previewSigChange(v) { pvState.sigId = v; renderPreview(); }
+function closePreview() { $('preview').classList.add('hide'); pvState = null; }
+async function previewPrint() {
+  if (pvState.sigId !== (pvState.doc.signatory_id || '')) {
+    const saved = await DB.save(pvState.table, { ...pvState.doc, signatory_id: pvState.sigId || null });
+    pvState.doc = saved || pvState.doc;
+    await reload();
+  }
+  paper(pvState.buildFn(pvState.doc, pvState.sigId));
+  closePreview();
 }
 
 /* ----------------------------------------------------------------- setup */
@@ -776,8 +1221,9 @@ function viewSetup() {
 (async function () {
   await applySettings();
   $('ad-hint').textContent = ONLINE()
-    ? 'Sign in with the staff account you created in Supabase.'
-    : 'Demo mode: any email works, the password is the one in assets/js/config.js.';
+    ? 'Sign in with the staff account you created in Supabase. Full access unless the Staff accounts tab says otherwise.'
+    : 'Demo mode: any email works, the password is the one in assets/js/config.js. Use the picker above to try a booking-staff login.';
+  if (!ONLINE()) $('ad-role-picker').classList.remove('hide');
   if (ONLINE()) { const { data } = await sb.auth.getSession(); if (data.session) start(); }
   else if (LS.get('adm', 0)) start();
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEditor(); });

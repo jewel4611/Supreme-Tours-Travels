@@ -64,11 +64,29 @@ app.netlify.com/drop. Add your domain under Domain settings; HTTPS is automatic.
 | Tab | What it is for |
 |---|---|
 | Dashboard | Quotes waiting for a call, customers on file, money collected, outstanding due |
-| Quotations | Every price planner submission, plus quotations you write by hand. Print, WhatsApp, or convert to an invoice in one click |
-| Bills | Invoices with line items, discount, advance and balance. Record payments, print a proper invoice, chase the due on WhatsApp |
+| Site info | Every business detail — phone, WhatsApp, email, address, trade licence, exchange rate, and every price planner fee — editable without touching code |
+| Quotations | Every price planner submission, plus quotations you write by hand. Preview with a chosen signature, print, WhatsApp, or convert to an invoice in one click |
+| Bills | Invoices with line items, discount, advance and balance. Record payments, preview and print with a signature, chase the due on WhatsApp |
+| Ledger | Running balance for every customer (invoiced vs paid) and every vendor (billed vs paid), each with a printable statement of account |
 | Customers | One row per mobile number, never duplicated. Search, tag, export, and send personalised WhatsApp promotions |
+| Vendors | Airlines, hotels, visa agents and other suppliers you pay — add bills, record payments, see what you owe each one |
+| Signatories | Authorised signers with a saved signature image. Pick who signs each quotation or invoice from a dropdown when previewing it |
+| Staff accounts | Give someone a booking-only login — hides Bills, Ledger, Vendors, Signatories, Site info and Setup |
 | Packages / Services / Photos | The website's content, in both languages |
 | Setup | Connection status and deployment steps |
+
+Previewing a quotation or invoice opens it on screen first — choose a signatory from
+the dropdown at the top, see the signature appear on the document live, then print
+or save as PDF. The choice is remembered on that document for next time.
+
+### Staff roles
+Everyone who signs in has full access by default. Add someone in the Staff accounts
+tab with the role "Booking staff" and their login sees only Dashboard, Quotations,
+Customers, Packages, Services and Photos — no money figures, no site settings. This
+hides those screens in the interface; every signed-in account still has the same
+underlying database permissions (see the note above `staff_profiles` in
+`supabase/schema.sql`), so it's meant for a small trusted team, not as a hard
+security wall.
 
 Printing a quotation or invoice uses the browser's print dialogue — choose
 "Save as PDF" to get a file you can email or send on WhatsApp.

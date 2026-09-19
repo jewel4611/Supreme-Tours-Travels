@@ -417,6 +417,35 @@
   </div>
 </div>
 
+<!-- Itinerary modal: day-by-day plan, plus what's included and excluded -->
+<div id="itin-modal" class="hide fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white rounded-[22px] max-w-[560px] w-full mx-auto my-6 overflow-hidden shadow-deep">
+    <div class="bg-sand px-6 py-4 flex items-start justify-between gap-3">
+      <div>
+        <p class="text-[11px] font-bold text-sea uppercase tracking-wide" data-i18n="itin.days">Day-by-day</p>
+        <h3 id="itin-title" class="font-display font-bold text-[19px] text-deep leading-snug"></h3>
+      </div>
+      <button onclick="closeItinerary()" class="w-9 h-9 grid place-items-center rounded-full hover:bg-white/60 shrink-0" aria-label="Close"><svg class="i text-[20px]"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="p-6 max-h-[65vh] overflow-y-auto">
+      <ol id="itin-days" class="grid gap-3"></ol>
+      <div class="grid sm:grid-cols-2 gap-5 mt-6 pt-5 border-t border-[#EDF2F5]">
+        <div>
+          <p class="text-[12px] font-bold text-leaf uppercase tracking-wide mb-2" data-i18n="itin.inc">What is included</p>
+          <ul id="itin-inc" class="grid gap-1.5 text-[13px] text-[#3A5568]"></ul>
+        </div>
+        <div>
+          <p class="text-[12px] font-bold text-[#B4361F] uppercase tracking-wide mb-2" data-i18n="itin.excl">What is not included</p>
+          <ul id="itin-excl" class="grid gap-1.5 text-[13px] text-[#3A5568]"></ul>
+        </div>
+      </div>
+    </div>
+    <div class="p-5 border-t border-[#EDF2F5]">
+      <button id="itin-price-btn" class="w-full bg-sea hover:bg-deep text-white font-bold py-3.5 rounded-xl" data-i18n="pk.cta">Price this trip</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="hide"></div>
 
 <script src="assets/js/config.js"></script>

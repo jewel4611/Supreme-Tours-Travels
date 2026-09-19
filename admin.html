@@ -27,6 +27,17 @@
     <form onsubmit="signIn(event)" class="grid gap-3.5">
       <div><label class="lbl" for="ad-email">Email</label><input id="ad-email" type="email" class="field" placeholder="admin@supremetours.com" required></div>
       <div><label class="lbl" for="ad-pass">Password</label><input id="ad-pass" type="password" class="field" placeholder="••••••••" required></div>
+      <div id="ad-role-picker" class="hide">
+        <label class="lbl">Sign in as (demo mode only)</label>
+        <div class="grid grid-cols-2 gap-2">
+          <label class="opt sel rounded-xl py-2 text-center text-[13px] font-semibold cursor-pointer" id="role-admin-opt">
+            <input type="radio" name="ad-role" value="admin" checked onchange="pickDemoRole(this)" class="sr-only">Admin
+          </label>
+          <label class="opt rounded-xl py-2 text-center text-[13px] font-semibold cursor-pointer" id="role-staff-opt">
+            <input type="radio" name="ad-role" value="staff" onchange="pickDemoRole(this)" class="sr-only">Booking staff
+          </label>
+        </div>
+      </div>
       <p id="ad-err" class="hide text-[12.5px] text-[#B4361F] bg-[#FDECE8] rounded-lg px-3 py-2"></p>
       <button class="bg-deep text-white font-bold py-3 rounded-xl">Sign in</button>
       <a href="index.html" class="text-[#5C7688] text-[13px] font-semibold text-center">Back to the website</a>
@@ -65,7 +76,24 @@
   </div>
 </div>
 
-<!-- Printable quotation / invoice -->
+<!-- Live preview: quotation / invoice / statement, with a choice of signature -->
+<div id="preview" class="hide fixed inset-0 z-[75] bg-ink/70 p-4 overflow-y-auto noprint">
+  <div class="max-w-[860px] mx-auto my-6">
+    <div class="bg-white rounded-t-[18px] px-5 py-3 flex flex-wrap items-center gap-3 justify-between sticky top-0 z-10 shadow-lift">
+      <div class="flex items-center gap-2">
+        <label class="text-[12.5px] font-semibold text-[#3A5568]">Signature on this document</label>
+        <select id="preview-sig" onchange="previewSigChange(this.value)" class="field field-sm" style="width:230px"></select>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="previewPrint()" class="bg-deep text-white text-[13px] font-bold px-4 py-2 rounded-lg flex items-center gap-1.5"><svg class="i text-[15px]"><use href="#ic-print"/></svg>Print / Save PDF</button>
+        <button onclick="closePreview()" class="w-9 h-9 grid place-items-center rounded-lg hover:bg-paper" aria-label="Close"><svg class="i text-[18px]"><use href="#ic-x"/></svg></button>
+      </div>
+    </div>
+    <div class="bg-[#DCE4E9] rounded-b-[18px] p-6" id="preview-body"></div>
+  </div>
+</div>
+
+<!-- Printable quotation / invoice / statement -->
 <div id="doc"></div>
 
 <div id="toast" class="hide"></div>

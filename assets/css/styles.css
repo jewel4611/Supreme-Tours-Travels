@@ -42,19 +42,19 @@ table.adm tr:hover td { background: #FAFCFD; }
 
 /* printable quotation / invoice */
 #doc { display: none; }
-#doc .sheet { background: #fff; color: #0A2A3B; width: 100%; max-width: 780px; margin: 0 auto; padding: 34px 38px; }
-#doc table { width: 100%; border-collapse: collapse; }
-#doc th { text-align: left; font-size: 12px; text-transform: none; color: #4A6373;
+.doc-sheet { background: #fff; color: #0A2A3B; width: 100%; max-width: 780px; margin: 0 auto; padding: 34px 38px; }
+#doc table, .doc-sheet table { width: 100%; border-collapse: collapse; }
+#doc th, .doc-sheet th { text-align: left; font-size: 12px; text-transform: none; color: #4A6373;
   border-bottom: 2px solid #0A6A94; padding: 8px 6px; }
-#doc td { padding: 9px 6px; border-bottom: 1px solid #E6EDF1; font-size: 13.5px; }
-#doc .right { text-align: right; }
+#doc td, .doc-sheet td { padding: 9px 6px; border-bottom: 1px solid #E6EDF1; font-size: 13.5px; }
+#doc .right, .doc-sheet .right { text-align: right; }
 
 @media print {
   @page { margin: 12mm; }
   body { background: #fff !important; }
   body.printing > *:not(#doc) { display: none !important; }
   body.printing #doc { display: block !important; }
-  #doc .sheet { box-shadow: none; padding: 0; max-width: none; }
+  #doc .doc-sheet { box-shadow: none; padding: 0; max-width: none; }
   .noprint { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
