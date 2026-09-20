@@ -220,6 +220,13 @@ In `assets/js/config.js`:
   an unpaid balance, and in the WhatsApp message when you send one. Each
   entry's `type` is `'personal'` (Send Money) or `'merchant'` (Payment) —
   this only changes the instruction text shown next to the number
+- `QUOTE_WHATSAPP` / `AIRFARE_WHATSAPP` — optional separate numbers for
+  tour quotes and airfare requests; leave blank to use `WHATSAPP`. All
+  three are also editable from the Site info tab in the admin panel
+- `QUOTE_WA_TEMPLATE_EN/BN` and `AIRFARE_WA_TEMPLATE_EN/BN` — the actual
+  wording of the WhatsApp message a customer sends you, in both
+  languages. Also editable from Site info, with a placeholder legend
+  shown right under each box
 - `DEMO_PASSWORD`
 - `PROMO_TEMPLATES` — your own campaign messages
 

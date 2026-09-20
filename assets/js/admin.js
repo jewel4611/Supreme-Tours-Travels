@@ -127,6 +127,8 @@ function viewSiteInfo() {
           <div><label class="lbl">Company name</label><input name="COMPANY" value="${esc(c.COMPANY)}" class="field" required></div>
           <div><label class="lbl">Phone number (shown on the site)</label><input name="PHONE" value="${esc(c.PHONE)}" class="field" required placeholder="+880 1XXX-XXXXXX"></div>
           <div><label class="lbl">WhatsApp number (digits only, country code first)</label><input name="WHATSAPP" value="${esc(c.WHATSAPP)}" class="field" required placeholder="8801XXXXXXXXX"></div>
+          <div><label class="lbl">Quote WhatsApp number <span class="text-[#5C7688] font-normal">— optional, leave blank to use the number above</span></label><input name="QUOTE_WHATSAPP" value="${esc(c.QUOTE_WHATSAPP || '')}" class="field" placeholder="8801XXXXXXXXX"></div>
+          <div><label class="lbl">Airfare WhatsApp number <span class="text-[#5C7688] font-normal">— optional, leave blank to use the number above</span></label><input name="AIRFARE_WHATSAPP" value="${esc(c.AIRFARE_WHATSAPP || '')}" class="field" placeholder="8801XXXXXXXXX"></div>
           <div><label class="lbl">Email</label><input name="EMAIL" type="email" value="${esc(c.EMAIL)}" class="field" required></div>
           <div class="sm:col-span-2"><label class="lbl">Address (English)</label><input name="ADDRESS_EN" value="${esc(c.ADDRESS_EN)}" class="field"></div>
           <div class="sm:col-span-2"><label class="lbl">ঠিকানা (বাংলা)</label><input name="ADDRESS_BN" value="${esc(c.ADDRESS_BN)}" class="field font-bangla"></div>
@@ -159,6 +161,33 @@ function viewSiteInfo() {
       </div>
 
       <div class="bg-white rounded-2xl shadow-lift p-6">
+        <h2 class="font-display font-bold text-[16px] mb-2">WhatsApp messages</h2>
+        <p class="text-[12.5px] text-[#5C7688] mb-4">What a customer's WhatsApp message says when they tap "Send it on WhatsApp" or "Also message us now". Use the placeholders shown under each box — they get filled in automatically for that customer's quote.</p>
+        <div class="grid lg:grid-cols-2 gap-5">
+          <div>
+            <label class="lbl">Tour quote — English</label>
+            <textarea name="QUOTE_WA_TEMPLATE_EN" rows="7" class="field font-mono text-[12.5px]">${esc(c.QUOTE_WA_TEMPLATE_EN)}</textarea>
+            <p class="text-[11px] text-[#5C7688] mt-1">Placeholders: {company} {package} {pax} {children} {nights} {hotel} {total}</p>
+          </div>
+          <div>
+            <label class="lbl">Tour quote — বাংলা</label>
+            <textarea name="QUOTE_WA_TEMPLATE_BN" rows="7" class="field font-mono text-[12.5px] font-bangla">${esc(c.QUOTE_WA_TEMPLATE_BN)}</textarea>
+            <p class="text-[11px] text-[#5C7688] mt-1">Placeholders: {company} {package} {pax} {children} {nights} {hotel} {total}</p>
+          </div>
+          <div>
+            <label class="lbl">Airfare request — English</label>
+            <textarea name="AIRFARE_WA_TEMPLATE_EN" rows="5" class="field font-mono text-[12.5px]">${esc(c.AIRFARE_WA_TEMPLATE_EN)}</textarea>
+            <p class="text-[11px] text-[#5C7688] mt-1">Placeholders: {route} {date} {passengers}</p>
+          </div>
+          <div>
+            <label class="lbl">Airfare request — বাংলা</label>
+            <textarea name="AIRFARE_WA_TEMPLATE_BN" rows="5" class="field font-mono text-[12.5px] font-bangla">${esc(c.AIRFARE_WA_TEMPLATE_BN)}</textarea>
+            <p class="text-[11px] text-[#5C7688] mt-1">Placeholders: {route} {date} {passengers}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-lift p-6">
         <h2 class="font-display font-bold text-[16px] mb-4">Staff panel</h2>
         <div class="grid sm:grid-cols-2 gap-4">
           <div><label class="lbl">Demo-mode password ${ONLINE() ? '<span class="text-[#5C7688] font-normal">— not used, Supabase login is active</span>' : ''}</label>
@@ -176,7 +205,11 @@ async function saveSiteInfo(e) {
   e.preventDefault();
   const d = Object.fromEntries(new FormData(e.target).entries());
   const patch = {
-    COMPANY: d.COMPANY, PHONE: d.PHONE, WHATSAPP: d.WHATSAPP.replace(/\D/g, ''), EMAIL: d.EMAIL,
+    COMPANY: d.COMPANY, PHONE: d.PHONE, WHATSAPP: d.WHATSAPP.replace(/\D/g, ''),
+    QUOTE_WHATSAPP: d.QUOTE_WHATSAPP ? d.QUOTE_WHATSAPP.replace(/\D/g, '') : '',
+    AIRFARE_WHATSAPP: d.AIRFARE_WHATSAPP ? d.AIRFARE_WHATSAPP.replace(/\D/g, '') : '', EMAIL: d.EMAIL,
+    QUOTE_WA_TEMPLATE_EN: d.QUOTE_WA_TEMPLATE_EN, QUOTE_WA_TEMPLATE_BN: d.QUOTE_WA_TEMPLATE_BN,
+    AIRFARE_WA_TEMPLATE_EN: d.AIRFARE_WA_TEMPLATE_EN, AIRFARE_WA_TEMPLATE_BN: d.AIRFARE_WA_TEMPLATE_BN,
     ADDRESS_EN: d.ADDRESS_EN, ADDRESS_BN: d.ADDRESS_BN, TRADE_LICENCE: d.TRADE_LICENCE, BIN: d.BIN,
     USD_RATE: +d.USD_RATE, VAT_PERCENT: +d.VAT_PERCENT,
     TRANSFER_FEE: +d.TRANSFER_FEE, MEAL_FEE: +d.MEAL_FEE, GUIDE_FEE: +d.GUIDE_FEE,

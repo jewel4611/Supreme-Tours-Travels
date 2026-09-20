@@ -348,13 +348,17 @@ async function submitAirfare(e) {
 }
 function waAirfare() {
   const r = lastAirfare, bn = APP.lang === 'bn';
-  const lines = r ? [
-    bn ? 'আসসালামু আলাইকুম, এয়ার টিকিটের ভাড়া জানতে চাই।' : 'Hello, I would like an airfare quote.', '',
-    (bn ? 'রুট: ' : 'Route: ') + r.origin + ' → ' + r.destination + (r.trip_type === 'return' ? (bn ? ' (রিটার্ন)' : ' (return)') : (bn ? ' (ওয়ান ওয়ে)' : ' (one-way)')),
-    (bn ? 'তারিখ: ' : 'Date: ') + (r.depart_date || '') + (r.return_date ? ' – ' + r.return_date : ''),
-    (bn ? 'যাত্রী: ' : 'Passengers: ') + r.passengers + ' · ' + r.cabin_class
-  ] : [bn ? 'আসসালামু আলাইকুম, এয়ার টিকিটের ভাড়া জানতে চাই।' : 'Hello, I would like an airfare quote.'];
-  window.open(waLink(CONFIG.WHATSAPP, lines.join('\n')), '_blank');
+  const num = CONFIG.AIRFARE_WHATSAPP || CONFIG.WHATSAPP;
+  if (!r) {
+    window.open(waLink(num, bn ? 'আসসালামু আলাইকুম, এয়ার টিকিটের ভাড়া জানতে চাই।' : 'Hello, I would like an airfare quote.'), '_blank');
+    return;
+  }
+  const text = fillTemplate(bn ? CONFIG.AIRFARE_WA_TEMPLATE_BN : CONFIG.AIRFARE_WA_TEMPLATE_EN, {
+    route: r.origin + ' → ' + r.destination + (r.trip_type === 'return' ? (bn ? ' (রিটার্ন)' : ' (return)') : (bn ? ' (ওয়ান ওয়ে)' : ' (one-way)')),
+    date: (r.depart_date || '') + (r.return_date ? ' – ' + r.return_date : ''),
+    passengers: r.passengers + ' · ' + r.cabin_class
+  });
+  window.open(waLink(num, text), '_blank');
 }
 
 /* ---------------------------------------------- wishlist, menu, whatsapp */
@@ -374,16 +378,17 @@ function toggleMenu() { $('menu').classList.toggle('hide'); }
 
 function waQuote() {
   const q = lastQuote, bn = APP.lang === 'bn';
-  const lines = q ? [
-    bn ? 'আসসালামু আলাইকুম, সুপ্রিম ট্যুরস অ্যান্ড ট্রাভেলস।' : 'Hello Supreme Tours & Travels,', '',
-    (bn ? 'ভ্রমণ: ' : 'Trip: ') + q.package,
-    (bn ? 'যাত্রী: ' : 'People: ') + q.pax + (q.children ? ' + ' + q.children + (bn ? ' শিশু' : ' children') : ''),
-    (bn ? 'রাত: ' : 'Nights: ') + q.nights,
-    (bn ? 'হোটেল: ' : 'Hotel: ') + q.hotel_tier,
-    (bn ? 'আনুমানিক: ' : 'Estimate: ') + money(q.total_bdt), '',
-    bn ? 'অনুগ্রহ করে চূড়ান্ত রেট জানাবেন।' : 'Please confirm the final rate.'
-  ] : [bn ? 'আমি একটি ট্যুর প্যাকেজ সম্পর্কে জানতে চাই।' : 'I would like to ask about a tour package.'];
-  window.open(waLink(CONFIG.WHATSAPP, lines.join('\n')), '_blank');
+  const num = CONFIG.QUOTE_WHATSAPP || CONFIG.WHATSAPP;
+  if (!q) {
+    window.open(waLink(num, bn ? 'আমি একটি ট্যুর প্যাকেজ সম্পর্কে জানতে চাই।' : 'I would like to ask about a tour package.'), '_blank');
+    return;
+  }
+  const text = fillTemplate(bn ? CONFIG.QUOTE_WA_TEMPLATE_BN : CONFIG.QUOTE_WA_TEMPLATE_EN, {
+    company: CONFIG.COMPANY, package: q.package, pax: q.pax,
+    children: q.children ? (' + ' + q.children + (bn ? ' শিশু' : ' children')) : '',
+    nights: q.nights, hotel: q.hotel_tier, total: money(q.total_bdt)
+  });
+  window.open(waLink(num, text), '_blank');
 }
 
 /* ------------------------------------------------------- lead capture */

@@ -27,6 +27,20 @@ window.CONFIG = {
   /* ---- Business details -------------------------------------------- */
   COMPANY:    'Supreme Tours & Travels',
   WHATSAPP:   '8801614501860',            // digits only, country code first
+  QUOTE_WHATSAPP: '',                     // optional — separate WhatsApp number for tour price quotes; leave blank to use WHATSAPP above
+  AIRFARE_WHATSAPP: '',                   // optional — separate WhatsApp number for airfare requests; leave blank to use WHATSAPP above
+
+  /* ---- WhatsApp message wording -------------------------------------
+     Shown when a customer taps "Send it on WhatsApp" after building a
+     tour quote, or "Also message us now" after an airfare request.
+     Edit the wording here or from Site info in the admin panel. Use
+     {curly braces} for the placeholders — they get filled in per quote:
+       Quote template:   {company} {package} {pax} {children} {nights} {hotel} {total}
+       Airfare template: {route} {date} {passengers}                          */
+  QUOTE_WA_TEMPLATE_EN: 'Hello {company},\n\nTrip: {package}\nPeople: {pax}{children}\nNights: {nights}\nHotel: {hotel}\nEstimate: {total}\n\nPlease confirm the final rate.',
+  QUOTE_WA_TEMPLATE_BN: 'আসসালামু আলাইকুম, {company}।\n\nভ্রমণ: {package}\nযাত্রী: {pax}{children}\nরাত: {nights}\nহোটেল: {hotel}\nআনুমানিক: {total}\n\nঅনুগ্রহ করে চূড়ান্ত রেট জানাবেন।',
+  AIRFARE_WA_TEMPLATE_EN: 'Hello, I would like an airfare quote.\n\nRoute: {route}\nDate: {date}\nPassengers: {passengers}',
+  AIRFARE_WA_TEMPLATE_BN: 'আসসালামু আলাইকুম, এয়ার টিকিটের ভাড়া জানতে চাই।\n\nরুট: {route}\nতারিখ: {date}\nযাত্রী: {passengers}',
   PHONE:      '+880 1614-501860',
   EMAIL:      'tours@supremegroup.xyz',
   ADDRESS_EN: '147/A (3rd Floor), Airport Road, Dhaka 1215',

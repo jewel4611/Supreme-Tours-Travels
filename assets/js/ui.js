@@ -27,6 +27,7 @@ function toast(msg) {
 /* phone helpers ------------------------------------------------------ */
 const waNumber = p => String(p || '').replace(/\D/g, '').replace(/^00/, '').replace(/^0/, '88');
 const waLink = (phone, text) => 'https://wa.me/' + waNumber(phone) + (text ? '?text=' + encodeURIComponent(text) : '');
+const fillTemplate = (tpl, vars) => String(tpl || '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : ''));
 
 /* generated artwork used whenever a photo is missing ------------------ */
 function artwork(hue, label, h) {
