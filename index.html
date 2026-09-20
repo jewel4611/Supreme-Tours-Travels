@@ -55,6 +55,7 @@
         </span>
       </a>
       <nav class="hidden lg:flex items-center gap-7 text-[14.5px] font-semibold text-[#3A5568]">
+        <a href="/" class="text-[#8B93A1] hover:text-sea">&larr; Supreme Group</a>
         <a href="#packages" class="hover:text-sea" data-i18n="nav.packages">Packages</a>
         <a href="#planner" class="hover:text-sea" data-i18n="nav.planner">Price planner</a>
         <a href="#services" class="hover:text-sea" data-i18n="nav.services">Services</a>
@@ -72,6 +73,7 @@
     </div>
     <div id="menu" class="hide lg:hidden border-t border-[#DDE7EC] bg-white">
       <div class="wrap py-3 grid gap-1 text-[15px] font-semibold text-[#3A5568]">
+        <a href="/" class="py-2.5 text-[#8B93A1]">&larr; Supreme Group</a>
         <a href="#packages" onclick="toggleMenu()" class="py-2.5" data-i18n="nav.packages">Packages</a>
         <a href="#planner" onclick="toggleMenu()" class="py-2.5" data-i18n="nav.planner">Price planner</a>
         <a href="#services" onclick="toggleMenu()" class="py-2.5" data-i18n="nav.services">Services</a>
@@ -524,6 +526,15 @@
 </div>
 
 <div id="toast" class="hide"></div>
+
+<div id="quickNavWrap" style="position:fixed;bottom:90px;right:22px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:10px;" class="noprint">
+  <div id="quickNavMenu" style="display:none;flex-direction:column;gap:8px;">
+    <a href="/equipment/" style="display:flex;align-items:center;gap:8px;background:#fff;color:#0A2A3B;padding:9px 14px;border-radius:999px;box-shadow:0 6px 16px rgba(0,0,0,0.18);text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap;">🏗️ Equipment Rental</a>
+    <a href="/mart/" style="display:flex;align-items:center;gap:8px;background:#fff;color:#0A2A3B;padding:9px 14px;border-radius:999px;box-shadow:0 6px 16px rgba(0,0,0,0.18);text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap;">🛒 Supreme Mart</a>
+    <a href="/supreme-equipment-training-center/" style="display:flex;align-items:center;gap:8px;background:#fff;color:#0A2A3B;padding:9px 14px;border-radius:999px;box-shadow:0 6px 16px rgba(0,0,0,0.18);text-decoration:none;font-size:13px;font-weight:700;white-space:nowrap;">🎓 Supreme Training</a>
+  </div>
+  <button onclick="var m=document.getElementById('quickNavMenu');m.style.display=(m.style.display==='flex')?'none':'flex';" aria-label="Quick links to our sites" style="width:56px;height:56px;border-radius:50%;background:#064A68;color:#fff;border:none;font-size:24px;box-shadow:0 6px 18px rgba(0,0,0,0.3);cursor:pointer;">🔗</button>
+</div>
 
 <script src="assets/js/config.js"></script>
 <script src="assets/js/ui.js"></script>

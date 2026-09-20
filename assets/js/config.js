@@ -43,8 +43,8 @@ window.CONFIG = {
   AIRFARE_WA_TEMPLATE_BN: 'আসসালামু আলাইকুম, এয়ার টিকিটের ভাড়া জানতে চাই।\n\nরুট: {route}\nতারিখ: {date}\nযাত্রী: {passengers}',
   PHONE:      '+880 1614-501860',
   EMAIL:      'tours@supremegroup.xyz',
-  ADDRESS_EN: '147/A (3rd Floor), Airport Road, Dhaka 1215',
-  ADDRESS_BN: '১৪৭/এ (৩য় তলা), এয়ারপোর্ট রোড, ঢাকা ১২১৫',
+  ADDRESS_EN: '147/A-2, Airport Road, Monipuripara, Tejgaon, Dhaka-1215',
+  ADDRESS_BN: '১৪৭/এ-২, এয়ারপোর্ট রোড, মনিপুরিপাড়া, তেজগাঁও, ঢাকা-১২১৫',
   TRADE_LICENCE: 'TRAD/DSCC/000000/2024',
   BIN: '000000000-0000',
 

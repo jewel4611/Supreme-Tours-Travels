@@ -7,11 +7,12 @@ const TABS = [
   { id: 'ledger', name: 'Ledger' }, { id: 'customers', name: 'Customers' },
   { id: 'vendors', name: 'Vendors' }, { id: 'signatories', name: 'Signatories' },
   { id: 'packages', name: 'Packages' }, { id: 'services', name: 'Services' },
+  { id: 'reviews', name: 'Reviews' },
   { id: 'gallery', name: 'Photos' }, { id: 'staff', name: 'Staff accounts' },
   { id: 'setup', name: 'Setup' }
 ];
 const ADMIN_ONLY_TABS = ['siteinfo', 'invoices', 'ledger', 'vendors', 'signatories', 'staff', 'setup'];
-const S = { quotations: [], airfare_requests: [], invoices: [], payments: [], customers: [], vendors: [], vendorLedger: [], signatories: [], staffProfiles: [], packages: [], services: [], gallery: [] };
+const S = { quotations: [], airfare_requests: [], invoices: [], payments: [], customers: [], vendors: [], vendorLedger: [], signatories: [], staffProfiles: [], packages: [], services: [], reviews: [], gallery: [] };
 let tab = 'dash', custSearch = '', promoPicked = [], ledgerMode = 'customer', currentRole = 'admin';
 
 const STATUS = {
@@ -89,6 +90,7 @@ async function reload() {
   S.staffProfiles = await DB.list('staff_profiles', []);
   S.packages = await DB.list('packages', SEED_PACKAGES);
   S.services = await DB.list('services', SEED_SERVICES);
+  S.reviews = await DB.list('reviews', SEED_REVIEWS);
   S.gallery = await DB.list('gallery', SEED_GALLERY);
 }
 function go(id) {
@@ -100,7 +102,7 @@ function go(id) {
   });
   ({ dash: viewDash, siteinfo: viewSiteInfo, quotations: viewQuotations, airfare: viewAirfare, invoices: viewInvoices,
      ledger: viewLedger, customers: viewCustomers, vendors: viewVendors, signatories: viewSignatories,
-     packages: viewPackages, services: viewServices, gallery: viewGallery, staff: viewStaff, setup: viewSetup })[id]();
+     packages: viewPackages, services: viewServices, reviews: viewReviews, gallery: viewGallery, staff: viewStaff, setup: viewSetup })[id]();
 }
 const head = (title, sub, actions = '') => `
   <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
@@ -785,6 +787,20 @@ function viewServices() {
           <button onclick="del('services','${s.id}')" class="p-2.5 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[17px]')}</button>
         </div></div>`).join('')}</div>`;
 }
+function viewReviews() {
+  $('pane').innerHTML = head('Reviews', 'Shown as customer testimonials on the website', btnPrimary('Add review', 'editReview()')) +
+    `<div class="grid gap-3">${S.reviews.map(r => `
+      <div class="bg-white rounded-2xl p-4 shadow-lift flex items-start gap-4">
+        <div class="flex-1">
+          <p class="font-bold text-[14.5px]">${esc(r.name)} <span class="font-normal text-[#5C7688]">· ${esc(r.city)}</span></p>
+          <p class="text-[13px] mt-1">${esc(r.review_en)}</p>
+          <p class="text-[12.5px] text-[#5C7688] font-bangla mt-1">${esc(r.review_bn || '—')}</p>
+        </div>
+        <div class="flex gap-1.5 shrink-0">
+          <button onclick="editReview('${r.id}')" class="p-2.5 rounded-lg hover:bg-paper text-sea">${icon('ic-edit', 'text-[17px]')}</button>
+          <button onclick="del('reviews','${r.id}')" class="p-2.5 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[17px]')}</button>
+        </div></div>`).join('')}</div>`;
+}
 function viewGallery() {
   $('pane').innerHTML = head('Photos', ONLINE() ? 'Uploaded to Supabase Storage' : 'Demo mode keeps photos in this browser only', btnPrimary('Add photo', 'editPhoto()')) +
     `<div class="grid grid-cols-2 md:grid-cols-4 gap-4">${S.gallery.map(g => `
@@ -984,6 +1000,18 @@ function editService(id) {
   ], async d => {
     await DB.save('services', { ...s, ...d, id: s.id || slug(d.title_en), created_at: s.created_at || new Date().toISOString() });
     await reload(); viewServices(); toast('Service saved');
+  });
+}
+function editReview(id) {
+  const r = S.reviews.find(x => x.id === id) || {};
+  openEditor(id ? 'Edit review' : 'New review', [
+    { k: 'name', label: 'Customer name', v: r.name, req: true, half: true },
+    { k: 'city', label: 'City', v: r.city, half: true },
+    { k: 'review_en', label: 'Review (English)', v: r.review_en, type: 'textarea', req: true },
+    { k: 'review_bn', label: 'রিভিউ (বাংলা)', v: r.review_bn, type: 'textarea' }
+  ], async d => {
+    await DB.save('reviews', { ...r, ...d, id: r.id || 'rev' + Date.now(), created_at: r.created_at || new Date().toISOString() });
+    await reload(); viewReviews(); toast('Review saved');
   });
 }
 function editPhoto(id) {

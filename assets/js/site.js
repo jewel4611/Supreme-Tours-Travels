@@ -2,7 +2,7 @@
    Public website behaviour
    ===================================================================== */
 let tier = '3star', filter = 'all';
-let packages = [], services = [], gallery = [], wishlist = LS.get('wish', []);
+let packages = [], services = [], reviews = [], gallery = [], wishlist = LS.get('wish', []);
 let addonState = {}, lastQuote = null;
 
 /* ---------------------------------------------------- language + money */
@@ -78,11 +78,11 @@ function renderGallery() {
 }
 
 function renderReviews() {
-  $('reviews').innerHTML = REVIEWS.map(r => `
+  $('reviews').innerHTML = reviews.map(r => `
     <blockquote class="bg-white rounded-2xl p-6 shadow-lift">
       <div class="flex gap-0.5 text-sun">${icon('ic-star', 'i-fill text-[15px]').repeat(5)}</div>
-      <p class="text-[14px] leading-relaxed mt-3">${esc(APP.lang === 'bn' ? r.bn : r.en)}</p>
-      <footer class="text-[12.5px] text-[#5C7688] mt-4 font-semibold">${esc(r.n)} · ${esc(r.c)}</footer>
+      <p class="text-[14px] leading-relaxed mt-3">${esc(APP.lang === 'bn' ? r.review_bn : r.review_en)}</p>
+      <footer class="text-[12.5px] text-[#5C7688] mt-4 font-semibold">${esc(r.name)} · ${esc(r.city)}</footer>
     </blockquote>`).join('');
   $('ftdest').innerHTML = packages.slice(0, 5).map(p =>
     `<li><a href="#packages" onclick="pickPackage('${p.id}')" class="hover:text-sun">${esc(L(p, 'title'))}</a></li>`).join('');
@@ -522,6 +522,7 @@ async function submitLead(e) {
 
   packages = await DB.list('packages', SEED_PACKAGES);
   services = await DB.list('services', SEED_SERVICES);
+  reviews = await DB.list('reviews', SEED_REVIEWS);
   gallery = await DB.list('gallery', SEED_GALLERY);
 
   document.querySelectorAll('.flt').forEach(b => b.onclick = () => {

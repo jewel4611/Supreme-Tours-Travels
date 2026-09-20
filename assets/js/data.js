@@ -263,7 +263,7 @@ const AIRFARE_DESTINATIONS = [
   { v: 'other', en: 'Other — type it in', bn: 'অন্য কোনো গন্তব্য — লিখুন' }
 ];
 
-const REVIEWS = [
-  { n: 'Farhana Islam', c: 'Dhanmondi', en: 'They rebuilt our Cox\u2019s Bazar plan twice because my mother cannot climb stairs. The final invoice matched the quote to the taka.', bn: 'আমার মা সিঁড়ি ভাঙতে পারেন না বলে কক্সবাজারের প্ল্যান দুবার নতুন করে সাজিয়ে দিয়েছে। শেষ ইনভয়েস কোটেশনের সঙ্গে টাকায় টাকায় মিলেছে।' },
-  { n: 'Tanvir Ahmed', c: 'Chattogram', en: 'Our Malaysia visa was rejected once before. They redid the file, and the second one came through in nine days.', bn: 'আগে একবার মালয়েশিয়ার ভিসা বাতিল হয়েছিল। ওরা ফাইল নতুন করে সাজিয়ে দেয়, দ্বিতীয়বার নয় দিনেই ভিসা হয়ে যায়।' }
+const SEED_REVIEWS = [
+  { id: 'seed-review-1', name: 'Farhana Islam', city: 'Dhanmondi', review_en: 'They rebuilt our Cox\u2019s Bazar plan twice because my mother cannot climb stairs. The final invoice matched the quote to the taka.', review_bn: 'আমার মা সিঁড়ি ভাঙতে পারেন না বলে কক্সবাজারের প্ল্যান দুবার নতুন করে সাজিয়ে দিয়েছে। শেষ ইনভয়েস কোটেশনের সঙ্গে টাকায় টাকায় মিলেছে।' },
+  { id: 'seed-review-2', name: 'Tanvir Ahmed', city: 'Chattogram', review_en: 'Our Malaysia visa was rejected once before. They redid the file, and the second one came through in nine days.', review_bn: 'আগে একবার মালয়েশিয়ার ভিসা বাতিল হয়েছিল। ওরা ফাইল নতুন করে সাজিয়ে দেয়, দ্বিতীয়বার নয় দিনেই ভিসা হয়ে যায়।' }
 ];
