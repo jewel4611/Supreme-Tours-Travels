@@ -16,7 +16,7 @@ function setLang(l) {
   document.querySelectorAll('[data-ph]').forEach(el => el.placeholder = t(el.dataset.ph));
   document.querySelectorAll('[data-num]').forEach(el => { el.dataset.raw = el.dataset.raw || el.textContent; el.textContent = num(el.dataset.raw); });
   $('ft-addr').textContent = l === 'bn' ? CONFIG.ADDRESS_BN : CONFIG.ADDRESS_EN;
-  renderPackages(); renderServices(); renderGallery(); renderReviews(); renderAddons(); fillDestSelects(); calc();
+  renderPackages(); renderServices(); renderGallery(); renderReviews(); renderAddons(); fillDestSelects(); fillAirfareSelects(); calc();
 }
 function setCurrency(c) { APP.currency = c; LS.set('currency', c); renderPackages(); renderAddons(); calc(); }
 
@@ -236,6 +236,127 @@ function openItinerary(id) {
 }
 function closeItinerary() { $('itin-modal').classList.add('hide'); }
 
+/* ------------------------------------------------------------- airfare */
+let afTripType = 'return', lastAirfare = null;
+function fillAirfareSelects() {
+  const oSel = $('af-origin'), dSel = $('af-dest');
+  if (!oSel || !dSel) return;
+  const keepO = oSel.value, keepD = dSel.value;
+  oSel.innerHTML = AIRFARE_ORIGINS.map(o => `<option value="${esc(o.v)}">${esc(APP.lang === 'bn' ? o.bn : o.en)}</option>`).join('');
+  dSel.innerHTML = AIRFARE_DESTINATIONS.map(d => `<option value="${esc(d.v)}">${esc(APP.lang === 'bn' ? d.bn : d.en)}</option>`).join('');
+  if (keepO) oSel.value = keepO;
+  if (keepD) dSel.value = keepD;
+}
+function afTripChange(input) {
+  afTripType = input.value;
+  $('af-oneway-opt').classList.toggle('sel', afTripType === 'oneway');
+  $('af-return-opt').classList.toggle('sel', afTripType === 'return');
+  $('af-return-wrap').classList.toggle('hide', afTripType === 'oneway');
+  $('af-return').required = afTripType === 'return';
+}
+function afDestChange() { $('af-dest-other-wrap').classList.toggle('hide', $('af-dest').value !== 'other'); }
+function openAirfare() {
+  fillAirfareSelects();
+  $('af-body').classList.remove('hide'); $('af-done').classList.add('hide');
+  $('af-modal').classList.remove('hide'); $('af-name').focus();
+}
+function closeAirfare() { $('af-modal').classList.add('hide'); }
+
+function sendAirfareAlert(row) {
+  if (!CONFIG.EMAILJS_PUBLIC_KEY || !CONFIG.EMAILJS_SERVICE_ID || !CONFIG.EMAILJS_AIRFARE_TEMPLATE_ID || !window.emailjs) return;
+  try {
+    emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_AIRFARE_TEMPLATE_ID, {
+      to_email: CONFIG.ALERT_EMAIL || CONFIG.EMAIL,
+      ref: row.doc_no || '', customer_name: row.name || '', customer_phone: row.phone || '',
+      customer_email: row.email || '—', origin: row.origin || '', destination: row.destination || '',
+      trip_type: row.trip_type || '', depart_date: row.depart_date || '', return_date: row.return_date || '—',
+      passengers: row.passengers || '', cabin_class: row.cabin_class || '', message: row.message || '—',
+      admin_link: location.origin + '/admin.html'
+    }).catch(err => console.warn('airfare alert email failed', err));
+  } catch (err) { console.warn('airfare alert email failed', err); }
+}
+
+function buildAirfareEmailBody(row, bn) {
+  const lines = [];
+  lines.push(bn ? `প্রিয় ${row.name},` : `Dear ${row.name},`);
+  lines.push('');
+  lines.push(bn ? `${CONFIG.COMPANY}-এর কাছে এয়ার ফেয়ার অনুরোধ করার জন্য ধন্যবাদ।` : `Thank you for your airfare request with ${CONFIG.COMPANY}.`);
+  lines.push('');
+  lines.push((bn ? 'রেফারেন্স: ' : 'Reference: ') + (row.doc_no || ''));
+  lines.push((bn ? 'রুট: ' : 'Route: ') + row.origin + ' → ' + row.destination + ' (' + (row.trip_type === 'return' ? (bn ? 'রিটার্ন' : 'return') : (bn ? 'ওয়ান ওয়ে' : 'one-way')) + ')');
+  lines.push((bn ? 'তারিখ: ' : 'Dates: ') + (row.depart_date || '') + (row.return_date ? ' – ' + row.return_date : ''));
+  lines.push((bn ? 'যাত্রী: ' : 'Passengers: ') + row.passengers + ' · ' + row.cabin_class);
+  lines.push('', bn
+    ? 'আমরা এখনই লাইভ ভাড়া যাচাই করছি এবং শীঘ্রই হোয়াটসঅ্যাপ বা ফোনে জানাব, সাধারণত একই দিনে।'
+    : 'We are checking the live fare now and will reply on WhatsApp or by phone shortly, usually the same day.');
+  lines.push('', CONFIG.COMPANY, CONFIG.PHONE + ' · ' + CONFIG.EMAIL);
+  return lines.join('\n');
+}
+function sendCustomerAirfareEmail(row) {
+  if (!row.email || !CONFIG.EMAILJS_PUBLIC_KEY || !CONFIG.EMAILJS_SERVICE_ID || !CONFIG.EMAILJS_CUSTOMER_TEMPLATE_ID || !window.emailjs) return;
+  const bn = (row.lang || APP.lang) === 'bn';
+  try {
+    emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_CUSTOMER_TEMPLATE_ID, {
+      to_email: row.email, customer_name: row.name || '',
+      subject: (bn ? `আপনার এয়ার ফেয়ার অনুরোধ — ${CONFIG.COMPANY} (${row.doc_no || ''})` : `Your airfare request — ${CONFIG.COMPANY} (${row.doc_no || ''})`),
+      body: buildAirfareEmailBody(row, bn),
+      company: CONFIG.COMPANY, company_phone: CONFIG.PHONE, company_email: CONFIG.EMAIL
+    }).catch(err => console.warn('customer airfare email failed', err));
+  } catch (err) { console.warn('customer airfare email failed', err); }
+}
+
+async function submitAirfare(e) {
+  e.preventDefault();
+  const btn = $('af-btn'); btn.disabled = true;
+  btn.textContent = APP.lang === 'bn' ? 'পাঠানো হচ্ছে…' : 'Sending…';
+
+  const name = $('af-name').value.trim();
+  const phone = $('af-phone').value.trim();
+  const email = $('af-email').value.trim() || null;
+  const consent = $('af-consent').checked;
+  const destVal = $('af-dest').value;
+  const destination = destVal === 'other' ? $('af-dest-other').value.trim() : destVal;
+
+  const row = {
+    id: uid(), created_at: new Date().toISOString(),
+    name, phone, email, origin: $('af-origin').value, destination,
+    trip_type: afTripType, depart_date: $('af-depart').value || null,
+    return_date: afTripType === 'return' ? ($('af-return').value || null) : null,
+    passengers: +$('af-pax').value || 1, cabin_class: $('af-class').value,
+    message: $('af-note').value.trim() || null, consent, lang: APP.lang, status: 'new', source: 'website'
+  };
+
+  try {
+    const customer = await upsertCustomer({ name, phone, email, source: 'website-airfare', lang: APP.lang, consent });
+    row.doc_no = await nextNumber('airfare_requests', 'AF');
+    row.customer_id = customer.id;
+    await DB.save('airfare_requests', row);
+    sendAirfareAlert(row);
+    sendCustomerAirfareEmail(row);
+    lastAirfare = row;
+    $('af-okmsg').textContent = APP.lang === 'bn'
+      ? 'ধন্যবাদ ' + name + '। আপনার অনুরোধ ' + row.doc_no + ' নম্বরে সংরক্ষিত হয়েছে। ভাড়া যাচাই করে ' + phone + ' নম্বরে যোগাযোগ করা হবে।'
+      : 'Thank you ' + name + '. Your request is saved as ' + row.doc_no + '. We will check the fare and reach out to ' + phone + '.';
+  } catch (err) {
+    console.warn(err);
+    lastAirfare = row;
+    $('af-okmsg').textContent = APP.lang === 'bn' ? 'ধন্যবাদ। আপনার অনুরোধ নেওয়া হয়েছে।' : 'Thank you. Your request has been taken.';
+  }
+
+  btn.disabled = false; btn.textContent = t('af.cta2');
+  $('af-body').classList.add('hide'); $('af-done').classList.remove('hide');
+}
+function waAirfare() {
+  const r = lastAirfare, bn = APP.lang === 'bn';
+  const lines = r ? [
+    bn ? 'আসসালামু আলাইকুম, এয়ার টিকিটের ভাড়া জানতে চাই।' : 'Hello, I would like an airfare quote.', '',
+    (bn ? 'রুট: ' : 'Route: ') + r.origin + ' → ' + r.destination + (r.trip_type === 'return' ? (bn ? ' (রিটার্ন)' : ' (return)') : (bn ? ' (ওয়ান ওয়ে)' : ' (one-way)')),
+    (bn ? 'তারিখ: ' : 'Date: ') + (r.depart_date || '') + (r.return_date ? ' – ' + r.return_date : ''),
+    (bn ? 'যাত্রী: ' : 'Passengers: ') + r.passengers + ' · ' + r.cabin_class
+  ] : [bn ? 'আসসালামু আলাইকুম, এয়ার টিকিটের ভাড়া জানতে চাই।' : 'Hello, I would like an airfare quote.'];
+  window.open(waLink(CONFIG.WHATSAPP, lines.join('\n')), '_blank');
+}
+
 /* ---------------------------------------------- wishlist, menu, whatsapp */
 function toggleWish(id) {
   const i = wishlist.indexOf(id);
@@ -269,6 +390,80 @@ function waQuote() {
 function openQuote() { calc(); $('qm-body').classList.remove('hide'); $('qm-done').classList.add('hide'); $('quote-modal').classList.remove('hide'); $('lead-name').focus(); }
 function closeQuote() { $('quote-modal').classList.add('hide'); }
 
+/* Fires an email to the office the moment a quote is saved. Fully optional —
+   does nothing until EMAILJS_* is filled in in config.js — and never blocks
+   or shows an error to the visitor if it fails; the quote itself is already
+   saved either way.                                                        */
+function sendQuoteAlert(row) {
+  if (!CONFIG.EMAILJS_PUBLIC_KEY || !CONFIG.EMAILJS_SERVICE_ID || !CONFIG.EMAILJS_TEMPLATE_ID || !window.emailjs) return;
+  try {
+    emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_TEMPLATE_ID, {
+      to_email: CONFIG.ALERT_EMAIL || CONFIG.EMAIL,
+      ref: row.doc_no || '',
+      customer_name: row.name || '',
+      customer_phone: row.phone || '',
+      customer_email: row.email || '—',
+      package: row.package || '',
+      pax: row.pax || '',
+      children: row.children || 0,
+      nights: row.nights || '',
+      hotel_tier: row.hotel_tier || '',
+      total: money(row.total_bdt),
+      message: row.message || '—',
+      lang: row.lang || 'en',
+      admin_link: location.origin + '/admin.html'
+    }).catch(err => console.warn('quote alert email failed', err));
+  } catch (err) { console.warn('quote alert email failed', err); }
+}
+
+/* Confirmation sent to the CUSTOMER's own email, in the language they were
+   using. Fully optional — needs EMAILJS_CUSTOMER_TEMPLATE_ID set AND the
+   customer to have given an email address. Silently does nothing otherwise. */
+function buildQuoteEmailBody(row, bn) {
+  const p = packages.find(x => x.id === row.package_id);
+  const lines = [];
+  lines.push(bn ? `প্রিয় ${row.name},` : `Dear ${row.name},`);
+  lines.push('');
+  lines.push(bn ? `${CONFIG.COMPANY}-কে কোটেশন অনুরোধ করার জন্য ধন্যবাদ।` : `Thank you for requesting a quote from ${CONFIG.COMPANY}.`);
+  lines.push('');
+  lines.push((bn ? 'রেফারেন্স: ' : 'Reference: ') + (row.doc_no || ''));
+  lines.push((bn ? 'ভ্রমণ: ' : 'Trip: ') + (row.package || ''));
+  lines.push((bn ? 'যাত্রী: ' : 'Travellers: ') + row.pax + (bn ? ' জন প্রাপ্তবয়স্ক' : ' adults') + (row.children ? ' + ' + row.children + (bn ? ' শিশু' : ' children') : ''));
+  lines.push((bn ? 'রাত: ' : 'Nights: ') + row.nights);
+  lines.push((bn ? 'হোটেল: ' : 'Hotel standard: ') + (row.hotel_tier || ''));
+  lines.push((bn ? 'আনুমানিক মোট: ' : 'Estimated total: ') + money(row.total_bdt));
+
+  if (p) {
+    const days = (bn && p.itinerary_bn && p.itinerary_bn.length) ? p.itinerary_bn : (p.itinerary_en || []);
+    const inc = (bn ? (p.inc_bn || p.inc_en) : p.inc_en) || [];
+    const excl = (bn ? (p.excl_bn || p.excl_en) : p.excl_en) || [];
+    if (days.length) {
+      lines.push('', bn ? 'দিনভিত্তিক পরিকল্পনা:' : 'Day-by-day plan:');
+      days.forEach((d, i) => lines.push(`${bn ? 'দিন' : 'Day'} ${i + 1}: ${d}`));
+    }
+    if (inc.length) { lines.push('', bn ? 'যা যা থাকছে:' : 'What is included:'); inc.forEach(i => lines.push('- ' + i)); }
+    if (excl.length) { lines.push('', bn ? 'যা থাকছে না:' : 'What is not included:'); excl.forEach(i => lines.push('- ' + i)); }
+  }
+
+  lines.push('', bn
+    ? `আমাদের টিম শীঘ্রই ${row.phone} নম্বরে ফোন করে চূড়ান্ত রেট জানাবে। এখনই কথা বলতে চাইলে হোয়াটসঅ্যাপে যোগাযোগ করুন।`
+    : `Our team will call ${row.phone} shortly to confirm the final rate. You can also reach us on WhatsApp right away.`);
+  lines.push('', CONFIG.COMPANY, CONFIG.PHONE + ' · ' + CONFIG.EMAIL);
+  return lines.join('\n');
+}
+function sendCustomerQuoteEmail(row) {
+  if (!row.email || !CONFIG.EMAILJS_PUBLIC_KEY || !CONFIG.EMAILJS_SERVICE_ID || !CONFIG.EMAILJS_CUSTOMER_TEMPLATE_ID || !window.emailjs) return;
+  const bn = (row.lang || APP.lang) === 'bn';
+  try {
+    emailjs.send(CONFIG.EMAILJS_SERVICE_ID, CONFIG.EMAILJS_CUSTOMER_TEMPLATE_ID, {
+      to_email: row.email, customer_name: row.name || '',
+      subject: (bn ? `আপনার কোটেশন — ${CONFIG.COMPANY} (${row.doc_no || ''})` : `Your quote from ${CONFIG.COMPANY} (${row.doc_no || ''})`),
+      body: buildQuoteEmailBody(row, bn),
+      company: CONFIG.COMPANY, company_phone: CONFIG.PHONE, company_email: CONFIG.EMAIL
+    }).catch(err => console.warn('customer quote email failed', err));
+  } catch (err) { console.warn('customer quote email failed', err); }
+}
+
 async function submitLead(e) {
   e.preventDefault();
   const btn = $('lead-btn'); btn.disabled = true;
@@ -290,6 +485,8 @@ async function submitLead(e) {
       ...lastQuote, lines: JSON.stringify(lastQuote.lines)
     };
     await DB.save('quotations', row);
+    sendQuoteAlert(row);
+    sendCustomerQuoteEmail(row);
     $('qm-ref').textContent = doc_no;
     $('qm-okmsg').textContent = APP.lang === 'bn'
       ? 'ধন্যবাদ ' + name + '। আপনার কোটেশন ' + doc_no + ' নম্বরে সংরক্ষিত হয়েছে। অফিস সময়ের মধ্যে ' + phone + ' নম্বরে আমরা কল করব।'
@@ -308,6 +505,7 @@ async function submitLead(e) {
 /* -------------------------------------------------------------- startup */
 (async function boot() {
   await applySettings();
+  if (CONFIG.EMAILJS_PUBLIC_KEY && window.emailjs) { try { emailjs.init(CONFIG.EMAILJS_PUBLIC_KEY); } catch (e) { console.warn('emailjs init', e); } }
   $('year').textContent = new Date().getFullYear();
   $('bar-phone').textContent = CONFIG.PHONE; $('ft-phone').textContent = CONFIG.PHONE;
   $('bar-mail').textContent = CONFIG.EMAIL; $('ft-mail').textContent = CONFIG.EMAIL;
@@ -336,7 +534,8 @@ async function submitLead(e) {
 
   fillDestSelects(); renderAddons(); setLang(LS.get('lang', 'en'));
   $('c-dest').addEventListener('change', () => { renderAddons(); calc(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeQuote(); closeItinerary(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeQuote(); closeItinerary(); closeAirfare(); } });
   $('quote-modal').addEventListener('click', e => { if (e.target.id === 'quote-modal') closeQuote(); });
   $('itin-modal').addEventListener('click', e => { if (e.target.id === 'itin-modal') closeItinerary(); });
+  $('af-modal').addEventListener('click', e => { if (e.target.id === 'af-modal') closeAirfare(); });
 })();

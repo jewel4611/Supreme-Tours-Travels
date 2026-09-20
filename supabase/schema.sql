@@ -126,6 +126,31 @@ alter table invoices add column if not exists emergency_phone text;
 alter table invoices add column if not exists signatory_id uuid;
 alter table quotations add column if not exists signatory_id uuid;
 
+-- ---------- airfare requests (any destination, not just tour packages) -
+create table if not exists airfare_requests (
+  id            uuid primary key default gen_random_uuid(),
+  created_at    timestamptz default now(),
+  doc_no        text,                           -- AF-2026-0001
+  customer_id   uuid references customers (id) on delete set null,
+  name          text not null,
+  phone         text not null,
+  email         text,
+  origin        text default 'Dhaka (DAC)',
+  destination   text,
+  trip_type     text default 'return',          -- oneway | return
+  depart_date   date,
+  return_date   date,
+  passengers    int default 1,
+  cabin_class   text default 'economy',          -- economy | business
+  message       text,
+  quoted_fare_bdt bigint,
+  status        text default 'new',              -- new | quoted | booked | lost
+  consent       boolean default true,
+  lang          text default 'en',
+  source        text default 'website'
+);
+create index if not exists airfare_requests_created_idx on airfare_requests (created_at desc);
+
 -- ---------- payments (individual lines, feeds the customer ledger) ----
 create table if not exists payments (
   id           uuid primary key default gen_random_uuid(),
@@ -204,6 +229,7 @@ alter table services   enable row level security;
 alter table gallery    enable row level security;
 alter table customers  enable row level security;
 alter table quotations enable row level security;
+alter table airfare_requests enable row level security;
 alter table invoices   enable row level security;
 alter table settings   enable row level security;
 alter table payments      enable row level security;
@@ -231,6 +257,11 @@ drop policy if exists "anyone submits a quotation" on quotations;
 drop policy if exists "staff manage quotations"    on quotations;
 create policy "anyone submits a quotation" on quotations for insert with check (true);
 create policy "staff manage quotations"    on quotations for all to authenticated using (true) with check (true);
+
+drop policy if exists "anyone submits an airfare request" on airfare_requests;
+drop policy if exists "staff manage airfare_requests"      on airfare_requests;
+create policy "anyone submits an airfare request" on airfare_requests for insert with check (true);
+create policy "staff manage airfare_requests"      on airfare_requests for all to authenticated using (true) with check (true);
 
 drop policy if exists "anyone creates a customer" on customers;
 drop policy if exists "staff manage customers"    on customers;

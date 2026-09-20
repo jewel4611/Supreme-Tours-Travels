@@ -12,15 +12,36 @@ window.CONFIG = {
   SUPABASE_ANON_KEY: 'sb_publishable_XJZND0TUNPQFlP8DJvvIdg_AKFxHxa9',
   STORAGE_BUCKET: 'media',
 
+  /* ---- New quote alerts (optional) -----------------------------------
+     Get you an email the moment someone finishes the price planner, so
+     a hot lead doesn't sit unread overnight. Free account at emailjs.com,
+     connected to your own Gmail — no server, no environment variables.
+     Setup steps are in README.md. Leave any of these blank to turn it off. */
+  EMAILJS_PUBLIC_KEY: '',
+  EMAILJS_SERVICE_ID: '',
+  EMAILJS_TEMPLATE_ID: '',
+  EMAILJS_AIRFARE_TEMPLATE_ID: '',   // optional — a second template for staff alerts on airfare requests; leave blank to skip that alert
+  EMAILJS_CUSTOMER_TEMPLATE_ID: '',  // optional — sends a confirmation email to the CUSTOMER (quote or airfare), only when they gave an email address
+  ALERT_EMAIL: '',              // leave blank to send alerts to EMAIL above
+
   /* ---- Business details -------------------------------------------- */
   COMPANY:    'Supreme Tours & Travels',
   WHATSAPP:   '8801614501860',            // digits only, country code first
   PHONE:      '+880 1614-501860',
-  EMAIL:      'tours.supremebd@gmail.com',
+  EMAIL:      'tours@supremegroup.xyz',
   ADDRESS_EN: '147/A (3rd Floor), Airport Road, Dhaka 1215',
   ADDRESS_BN: '১৪৭/এ (৩য় তলা), এয়ারপোর্ট রোড, ঢাকা ১২১৫',
   TRADE_LICENCE: 'TRAD/DSCC/000000/2024',
   BIN: '000000000-0000',
+
+  /* ---- Payment methods shown on invoices and in WhatsApp messages ---
+     "personal" means customers use Send Money (not the Payment button),
+     so remind them to note the invoice number in the reference field.  */
+  PAYMENT_METHODS: [
+    { name: 'bKash', number: '01611464611', type: 'personal' },
+    { name: 'Nagad', number: '01611464611', type: 'personal' },
+    { name: 'Upay',  number: '01611464611', type: 'personal' }
+  ],
 
   /* ---- Money -------------------------------------------------------- */
   USD_RATE: 122,                 // 1 USD = x BDT, display only

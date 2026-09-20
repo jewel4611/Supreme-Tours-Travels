@@ -100,7 +100,25 @@ window.T = {
   'wish.empty':   ['You have not saved any package yet.', 'আপনি এখনো কোনো প্যাকেজ সেভ করেননি।'],
   'wish.h':       ['Saved packages', 'সেভ করা প্যাকেজ'],
   'toast.saved':  ['Saved', 'সেভ হয়েছে'],
-  'toast.removed':['Removed', 'মুছে ফেলা হয়েছে']
+  'toast.removed':['Removed', 'মুছে ফেলা হয়েছে'],
+  'af.cta':       ['Get an airfare quote', 'এয়ার টিকিটের দাম জানুন'],
+  'af.h':         ['Airfare quote request', 'এয়ার ফেয়ার কোটেশন'],
+  'af.sub':       ['Tell us where you need to fly — we will check the fare and reply on WhatsApp or a call, usually the same day.', 'কোথায় যেতে চান তা জানান — আমরা ভাড়া যাচাই করে হোয়াটসঅ্যাপ বা ফোনে জানাব, সাধারণত একই দিনে।'],
+  'af.trip':      ['Trip type', 'ট্রিপের ধরন'],
+  'af.oneway':    ['One-way', 'ওয়ান ওয়ে'],
+  'af.return':    ['Return', 'রিটার্ন'],
+  'af.from':      ['Flying from', 'কোথা থেকে'],
+  'af.to':        ['Flying to', 'কোথায় যাবেন'],
+  'af.to.other':  ['Type the destination', 'গন্তব্যের নাম লিখুন'],
+  'af.depart':    ['Departure date', 'যাওয়ার তারিখ'],
+  'af.rtn':       ['Return date', 'ফেরার তারিখ'],
+  'af.pax':       ['Passengers', 'যাত্রী সংখ্যা'],
+  'af.class':     ['Class', 'শ্রেণী'],
+  'af.economy':   ['Economy', 'ইকোনমি'],
+  'af.business':  ['Business', 'বিজনেস'],
+  'af.cta2':      ['Send this request', 'অনুরোধ পাঠান'],
+  'af.okh':       ['Request sent', 'অনুরোধ পাঠানো হয়েছে'],
+  'af.small':     ['We check live fares before replying, so there is no instant price here — just a fast, honest one.', 'উত্তর দেওয়ার আগে আমরা সরাসরি ভাড়া যাচাই করি, তাই এখানে তাৎক্ষণিক দাম দেখানো হয় না — তবে দ্রুত ও সঠিক দাম জানানো হয়।'],
 };
 
 const t = k => (T[k] ? T[k][APP.lang === 'bn' ? 1 : 0] : k);

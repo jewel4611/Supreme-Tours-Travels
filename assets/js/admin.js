@@ -3,7 +3,7 @@
    ===================================================================== */
 const TABS = [
   { id: 'dash', name: 'Dashboard' }, { id: 'siteinfo', name: 'Site info' },
-  { id: 'quotations', name: 'Quotations' }, { id: 'invoices', name: 'Bills' },
+  { id: 'quotations', name: 'Quotations' }, { id: 'airfare', name: 'Airfare' }, { id: 'invoices', name: 'Bills' },
   { id: 'ledger', name: 'Ledger' }, { id: 'customers', name: 'Customers' },
   { id: 'vendors', name: 'Vendors' }, { id: 'signatories', name: 'Signatories' },
   { id: 'packages', name: 'Packages' }, { id: 'services', name: 'Services' },
@@ -11,7 +11,7 @@ const TABS = [
   { id: 'setup', name: 'Setup' }
 ];
 const ADMIN_ONLY_TABS = ['siteinfo', 'invoices', 'ledger', 'vendors', 'signatories', 'staff', 'setup'];
-const S = { quotations: [], invoices: [], payments: [], customers: [], vendors: [], vendorLedger: [], signatories: [], staffProfiles: [], packages: [], services: [], gallery: [] };
+const S = { quotations: [], airfare_requests: [], invoices: [], payments: [], customers: [], vendors: [], vendorLedger: [], signatories: [], staffProfiles: [], packages: [], services: [], gallery: [] };
 let tab = 'dash', custSearch = '', promoPicked = [], ledgerMode = 'customer', currentRole = 'admin';
 
 const STATUS = {
@@ -79,6 +79,7 @@ async function start() {
 }
 async function reload() {
   S.quotations = await DB.list('quotations', []);
+  S.airfare_requests = await DB.list('airfare_requests', []);
   S.invoices = await DB.list('invoices', []);
   S.payments = await DB.list('payments', []);
   S.customers = await DB.list('customers', []);
@@ -97,7 +98,7 @@ function go(id) {
     const on = b.dataset.tab === id;
     b.className = 'adtab text-[13px] font-semibold px-4 py-2 rounded-lg whitespace-nowrap ' + (on ? 'tab-on' : 'text-white/70 hover:text-white');
   });
-  ({ dash: viewDash, siteinfo: viewSiteInfo, quotations: viewQuotations, invoices: viewInvoices,
+  ({ dash: viewDash, siteinfo: viewSiteInfo, quotations: viewQuotations, airfare: viewAirfare, invoices: viewInvoices,
      ledger: viewLedger, customers: viewCustomers, vendors: viewVendors, signatories: viewSignatories,
      packages: viewPackages, services: viewServices, gallery: viewGallery, staff: viewStaff, setup: viewSetup })[id]();
 }
@@ -509,12 +510,54 @@ function viewQuotations() {
     </div>`;
 }
 
+/* -------------------------------------------------------------- airfare */
+function waAirfareTextAdmin(r) {
+  const due = r.quoted_fare_bdt ? `Fare: ${taka(r.quoted_fare_bdt)}` : 'Checking the fare now, will confirm shortly.';
+  return [`${CONFIG.COMPANY} — airfare quote ${r.doc_no || ''}`, '', `Dear ${r.name},`,
+    `Route: ${r.origin} → ${r.destination} (${r.trip_type === 'return' ? 'return' : 'one-way'})`,
+    `Date: ${r.depart_date || ''}${r.return_date ? ' to ' + r.return_date : ''}`,
+    `Passengers: ${r.passengers} · ${r.cabin_class}`, due, '', CONFIG.PHONE].join('\n');
+}
+function viewAirfare() {
+  $('pane').innerHTML = head('Airfare requests', `${S.airfare_requests.length} on file · ${S.airfare_requests.filter(r => r.status === 'new').length} waiting for a fare check`,
+    btnGhost('Download CSV', "csv('airfare_requests')")) + `
+    <div class="bg-white rounded-2xl shadow-lift overflow-x-auto">
+    ${S.airfare_requests.length ? `<table class="adm"><thead><tr>
+      <th>Number</th><th>Customer</th><th>Route</th><th>Dates</th><th>Fare</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+      ${S.airfare_requests.map(r => `<tr>
+        <td class="whitespace-nowrap"><strong>${esc(r.doc_no || '—')}</strong><br><span class="text-[11.5px] text-[#5C7688]">${dt(r.created_at)}</span></td>
+        <td><strong>${esc(r.name)}</strong><br><a href="tel:${esc(r.phone)}" class="text-sea text-[12.5px] font-semibold">${esc(r.phone)}</a></td>
+        <td>${esc(r.origin)} → ${esc(r.destination)}<br><span class="text-[11.5px] text-[#5C7688]">${r.trip_type === 'return' ? 'Return' : 'One-way'} · ${esc(r.cabin_class)} · ${r.passengers} pax</span>
+            ${r.message ? `<div class="text-[11.5px] text-[#5C7688] mt-1 max-w-[200px]">“${esc(r.message)}”</div>` : ''}</td>
+        <td class="whitespace-nowrap">${esc(r.depart_date || '')}${r.return_date ? '<br>' + esc(r.return_date) : ''}</td>
+        <td class="whitespace-nowrap"><button onclick="setAirfareQuote('${r.id}')" class="font-semibold ${r.quoted_fare_bdt ? 'text-deep' : 'text-sea'}">${r.quoted_fare_bdt ? taka(r.quoted_fare_bdt) : 'Set fare'}</button></td>
+        <td><select onchange="setStatus('airfare_requests','${r.id}',this.value)" class="chip ${STATUS[r.status] || STATUS.new} border-0">
+          ${['new', 'quoted', 'booked', 'lost'].map(s => `<option ${r.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
+        <td><div class="flex gap-1">
+          <a target="_blank" href="${waLink(r.phone, waAirfareTextAdmin(r))}" title="WhatsApp" class="p-2 rounded-lg hover:bg-paper text-[#1FA855]">${icon('ic-wa', 'i-fill text-[17px]')}</a>
+          <button onclick="del('airfare_requests','${r.id}')" title="Delete" class="p-2 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[17px]')}</button>
+        </div></td></tr>`).join('')}</tbody></table>`
+      : `<p class="p-10 text-center text-[#5C7688] text-[14px]">No airfare requests yet. They appear here the moment someone submits one from the website.</p>`}
+    </div>`;
+}
+async function setAirfareQuote(id) {
+  const r = S.airfare_requests.find(x => x.id === id);
+  const amt = prompt(`Fare for ${r.name} (${r.origin} → ${r.destination})?`, r.quoted_fare_bdt || '');
+  if (amt === null) return;
+  await DB.save('airfare_requests', { ...r, quoted_fare_bdt: +amt || null, status: (+amt ? 'quoted' : r.status) });
+  await reload(); go('airfare'); toast('Fare saved');
+}
+
 /* ------------------------------------------------------------- invoices */
 function waInvoiceText(v) {
   const due = (+v.total_bdt || 0) - (+v.paid_bdt || 0);
+  const payLines = due > 0 && CONFIG.PAYMENT_METHODS && CONFIG.PAYMENT_METHODS.length
+    ? ['', 'Pay via:', ...CONFIG.PAYMENT_METHODS.map(m => `${m.name}: ${m.number}${m.type === 'personal' ? ' (Send Money)' : ''}`),
+       `Please put ${v.doc_no} as the reference.`]
+    : [];
   return [`${CONFIG.COMPANY} — invoice ${v.doc_no}`, '', `Dear ${v.name},`,
     `Amount: ${taka(v.total_bdt)}`, `Paid: ${taka(v.paid_bdt)}`, `Due: ${taka(due)}`,
-    v.due_date ? `Please clear the due by ${dt(v.due_date)}.` : '', '', CONFIG.COMPANY, CONFIG.PHONE]
+    v.due_date ? `Please clear the due by ${dt(v.due_date)}.` : '', ...payLines, '', CONFIG.COMPANY, CONFIG.PHONE]
     .filter(Boolean).join('\n');
 }
 function viewInvoices() {
@@ -943,7 +986,7 @@ function csv(table) {
   a.click();
 }
 
-function docShell(kind, d, rows, totals, footNote, sig) {
+function docShell(kind, d, rows, totals, footNote, sig, payBox) {
   return `<div class="doc-sheet">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:3px solid #0A6A94;padding-bottom:16px">
       <div style="display:flex;gap:12px;align-items:center">
@@ -987,6 +1030,8 @@ function docShell(kind, d, rows, totals, footNote, sig) {
       <table style="width:300px">${totals}</table>
     </div>
 
+    ${payBox || ''}
+
     <div style="margin-top:26px;font-size:11.5px;color:#4A6373;line-height:1.6;border-top:1px solid #E6EDF1;padding-top:12px">
       ${esc(footNote || '')}
     </div>
@@ -1021,6 +1066,16 @@ function quotationDoc(q, sigId) {
     'This quotation covers the services listed above only. Air fares and hotel rates are held for 14 days and are subject to availability at the time of confirmation. Government taxes and our service charge are included.',
     sig);
 }
+function paymentBox(refNo) {
+  if (!CONFIG.PAYMENT_METHODS || !CONFIG.PAYMENT_METHODS.length) return '';
+  return `<div style="background:#FFF4D0;border-radius:10px;padding:14px 16px;margin-top:16px">
+    <div style="font-size:11px;font-weight:700;color:#8A6A00;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">How to pay</div>
+    <div style="display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:#4A2E00">
+      ${CONFIG.PAYMENT_METHODS.map(m => `<div><strong>${esc(m.name)}</strong> ${esc(m.number)}${m.type === 'personal' ? ' <span style="font-size:11px;color:#8A6A00">(Send Money)</span>' : ''}</div>`).join('')}
+    </div>
+    <div style="font-size:11.5px;color:#8A6A00;margin-top:8px">Please put <strong>${esc(refNo)}</strong> in the reference field so we can match your payment.</div>
+  </div>`;
+}
 function invoiceDoc(v, sigId) {
   const due = (+v.total_bdt || 0) - (+v.paid_bdt || 0);
   const sig = S.signatories.find(s => s.id === sigId);
@@ -1031,7 +1086,7 @@ function invoiceDoc(v, sigId) {
     totalRow('Total', taka(v.total_bdt), true) +
     totalRow('Paid', taka(v.paid_bdt)) +
     totalRow('Balance due', taka(due), true),
-    v.note || '', sig);
+    v.note || '', sig, due > 0 ? paymentBox(v.doc_no) : '');
 }
 function bookingShell(d, sig) {
   return `<div class="doc-sheet">

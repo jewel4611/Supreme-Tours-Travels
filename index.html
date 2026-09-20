@@ -16,6 +16,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="assets/js/tailwind.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body class="font-sans lang-en antialiased">
 
@@ -296,6 +297,15 @@
       <h2 class="font-display font-extrabold text-[30px] sm:text-[36px] tracking-tight" data-i18n="sv.h">Everything else we handle</h2>
       <p class="text-[15px] text-[#5C7688] mt-2 max-w-[60ch]" data-i18n="sv.sub">Most travellers come to us for one thing and stay for the rest.</p>
       <div id="svgrid" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8"></div>
+      <div class="mt-8 bg-deep text-white rounded-2xl p-6 sm:p-7 flex flex-wrap items-center justify-between gap-5">
+        <div>
+          <p class="font-display font-bold text-[18px]" data-i18n="af.h">Airfare quote request</p>
+          <p class="text-[13.5px] text-white/75 mt-1 max-w-[55ch]" data-i18n="af.sub">Tell us where you need to fly — we will check the fare and reply on WhatsApp or a call, usually the same day.</p>
+        </div>
+        <button onclick="openAirfare()" class="bg-sun text-ink font-bold px-6 py-3 rounded-xl shrink-0 flex items-center gap-2">
+          <svg class="i text-[17px]"><use href="#ic-plane"/></svg><span data-i18n="af.cta">Get an airfare quote</span>
+        </button>
+      </div>
     </div>
   </section>
 
@@ -446,6 +456,73 @@
   </div>
 </div>
 
+<!-- Airfare quote modal -->
+<div id="af-modal" class="hide fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white rounded-[22px] max-w-[480px] w-full mx-auto my-6 overflow-hidden shadow-deep">
+    <div class="bg-sand px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <svg viewBox="0 0 400 300" class="w-11 h-8"><use href="#brandmark"/></svg>
+        <p class="font-display font-bold text-[16px] text-deep" data-i18n="af.h">Airfare quote request</p>
+      </div>
+      <button onclick="closeAirfare()" class="w-9 h-9 grid place-items-center rounded-full hover:bg-white/60" aria-label="Close"><svg class="i text-[20px]"><use href="#ic-x"/></svg></button>
+    </div>
+
+    <div id="af-body" class="p-6">
+      <form onsubmit="submitAirfare(event)" class="grid gap-3.5">
+        <div class="grid grid-cols-2 gap-2" role="group" aria-label="Trip type">
+          <label id="af-oneway-opt" class="opt rounded-xl py-2.5 text-center text-[13.5px] font-semibold cursor-pointer">
+            <input type="radio" name="af-trip" value="oneway" onchange="afTripChange(this)" class="sr-only"><span data-i18n="af.oneway">One-way</span>
+          </label>
+          <label id="af-return-opt" class="opt sel rounded-xl py-2.5 text-center text-[13.5px] font-semibold cursor-pointer">
+            <input type="radio" name="af-trip" value="return" checked onchange="afTripChange(this)" class="sr-only"><span data-i18n="af.return">Return</span>
+          </label>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="lbl" data-i18n="af.from">Flying from</label><select id="af-origin" class="field"></select></div>
+          <div><label class="lbl" data-i18n="af.to">Flying to</label><select id="af-dest" onchange="afDestChange()" class="field"></select></div>
+        </div>
+        <div id="af-dest-other-wrap" class="hide">
+          <label class="lbl" data-i18n="af.to.other">Type the destination</label>
+          <input id="af-dest-other" class="field" placeholder="City or country">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="lbl" data-i18n="af.depart">Departure date</label><input id="af-depart" type="date" required class="field"></div>
+          <div id="af-return-wrap"><label class="lbl" data-i18n="af.rtn">Return date</label><input id="af-return" type="date" class="field"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="lbl" data-i18n="af.pax">Passengers</label><input id="af-pax" type="number" min="1" value="1" class="field"></div>
+          <div><label class="lbl" data-i18n="af.class">Class</label>
+            <select id="af-class" class="field">
+              <option value="economy" data-i18n="af.economy">Economy</option>
+              <option value="business" data-i18n="af.business">Business</option>
+            </select>
+          </div>
+        </div>
+        <div><label class="lbl" data-i18n="qm.name">Your name</label><input id="af-name" required class="field" data-ph="qm.ph.name" placeholder="Md. Rahim Uddin"></div>
+        <div><label class="lbl" data-i18n="qm.phone">Mobile number</label><input id="af-phone" required type="tel" inputmode="tel" class="field" placeholder="017XXXXXXXX"></div>
+        <div><label class="lbl" data-i18n="qm.email">Email (optional)</label><input id="af-email" type="email" class="field" placeholder="you@example.com"></div>
+        <div><label class="lbl" data-i18n="qm.note">Anything we should know?</label><textarea id="af-note" rows="2" class="field"></textarea></div>
+        <label class="flex gap-2.5 items-start text-[12.5px] text-[#5C7688]">
+          <input type="checkbox" id="af-consent" checked class="mt-0.5 w-4 h-4 accent-[#0A6A94]">
+          <span data-i18n="qm.consent">You may contact me on this number about this trip and future offers.</span>
+        </label>
+        <button type="submit" id="af-btn" class="w-full bg-sea hover:bg-deep text-white font-bold py-3.5 rounded-xl" data-i18n="af.cta2">Send this request</button>
+        <p class="text-[11.5px] text-[#5C7688] text-center" data-i18n="af.small">We check live fares before replying, so there is no instant price here — just a fast, honest one.</p>
+      </form>
+    </div>
+
+    <div id="af-done" class="hide p-8 text-center">
+      <div class="w-16 h-16 rounded-full bg-[#E8F6EE] text-leaf grid place-items-center mx-auto"><svg class="i text-[30px]"><use href="#ic-check"/></svg></div>
+      <h3 class="font-display font-bold text-[20px] mt-4" data-i18n="af.okh">Request sent</h3>
+      <p class="text-[14px] text-[#5C7688] mt-2 leading-relaxed" id="af-okmsg"></p>
+      <div class="grid gap-2.5 mt-6">
+        <button onclick="waAirfare()" class="bg-[#1FA855] text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2"><svg class="i i-fill text-[19px]"><use href="#ic-wa"/></svg><span data-i18n="qm.okwa">Also message us now</span></button>
+        <button onclick="closeAirfare()" class="text-[#5C7688] font-semibold py-2 text-[13.5px]" data-i18n="qm.okclose">Back to the site</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="hide"></div>
 
 <script src="assets/js/config.js"></script>
@@ -453,5 +530,6 @@
 <script src="assets/js/i18n.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/site.js"></script>
+
 </body>
 </html>

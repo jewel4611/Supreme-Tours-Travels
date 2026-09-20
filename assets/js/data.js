@@ -207,6 +207,62 @@ const SEED_GALLERY = [
   { id: 'g4', caption_en: 'Batu Caves steps', caption_bn: 'বাটু কেভসের সিঁড়ি', img: '', hue: 16 }
 ];
 
+/* Airfare quote destinations — covers the routes a Dhaka agency is asked
+   for most. "Other" lets a customer type anything not on the list, so
+   nothing is ever actually out of reach.                                */
+const AIRFARE_ORIGINS = [
+  { v: 'Dhaka (DAC)', en: 'Dhaka (DAC)', bn: 'ঢাকা (DAC)' },
+  { v: 'Chattogram (CGP)', en: 'Chattogram (CGP)', bn: 'চট্টগ্রাম (CGP)' },
+  { v: 'Sylhet (ZYL)', en: 'Sylhet (ZYL)', bn: 'সিলেট (ZYL)' }
+];
+const AIRFARE_DESTINATIONS = [
+  { v: 'Dubai (DXB)', en: 'Dubai (DXB)', bn: 'দুবাই (DXB)' },
+  { v: 'Abu Dhabi (AUH)', en: 'Abu Dhabi (AUH)', bn: 'আবুধাবি (AUH)' },
+  { v: 'Sharjah (SHJ)', en: 'Sharjah (SHJ)', bn: 'শারজাহ (SHJ)' },
+  { v: 'Doha (DOH)', en: 'Doha (DOH)', bn: 'দোহা (DOH)' },
+  { v: 'Riyadh (RUH)', en: 'Riyadh (RUH)', bn: 'রিয়াদ (RUH)' },
+  { v: 'Jeddah (JED)', en: 'Jeddah (JED)', bn: 'জেদ্দা (JED)' },
+  { v: 'Dammam (DMM)', en: 'Dammam (DMM)', bn: 'দাম্মাম (DMM)' },
+  { v: 'Kuwait City (KWI)', en: 'Kuwait City (KWI)', bn: 'কুয়েত সিটি (KWI)' },
+  { v: 'Muscat (MCT)', en: 'Muscat (MCT)', bn: 'মাস্কাট (MCT)' },
+  { v: 'Manama (BAH)', en: 'Manama (BAH)', bn: 'মানামা (BAH)' },
+  { v: 'Kolkata (CCU)', en: 'Kolkata (CCU)', bn: 'কলকাতা (CCU)' },
+  { v: 'Delhi (DEL)', en: 'Delhi (DEL)', bn: 'দিল্লি (DEL)' },
+  { v: 'Mumbai (BOM)', en: 'Mumbai (BOM)', bn: 'মুম্বাই (BOM)' },
+  { v: 'Chennai (MAA)', en: 'Chennai (MAA)', bn: 'চেন্নাই (MAA)' },
+  { v: 'Kathmandu (KTM)', en: 'Kathmandu (KTM)', bn: 'কাঠমান্ডু (KTM)' },
+  { v: 'Colombo (CMB)', en: 'Colombo (CMB)', bn: 'কলম্বো (CMB)' },
+  { v: 'Malé (MLE)', en: 'Malé (MLE)', bn: 'মালে (MLE)' },
+  { v: 'Kuala Lumpur (KUL)', en: 'Kuala Lumpur (KUL)', bn: 'কুয়ালালামপুর (KUL)' },
+  { v: 'Singapore (SIN)', en: 'Singapore (SIN)', bn: 'সিঙ্গাপুর (SIN)' },
+  { v: 'Bangkok (BKK)', en: 'Bangkok (BKK)', bn: 'ব্যাংকক (BKK)' },
+  { v: 'Jakarta (CGK)', en: 'Jakarta (CGK)', bn: 'জাকার্তা (CGK)' },
+  { v: 'Denpasar, Bali (DPS)', en: 'Denpasar, Bali (DPS)', bn: 'দেনপাসার, বালি (DPS)' },
+  { v: 'Manila (MNL)', en: 'Manila (MNL)', bn: 'ম্যানিলা (MNL)' },
+  { v: 'Ho Chi Minh City (SGN)', en: 'Ho Chi Minh City (SGN)', bn: 'হো চি মিন সিটি (SGN)' },
+  { v: 'Hong Kong (HKG)', en: 'Hong Kong (HKG)', bn: 'হংকং (HKG)' },
+  { v: 'Guangzhou (CAN)', en: 'Guangzhou (CAN)', bn: 'গুয়াংজু (CAN)' },
+  { v: 'Tokyo (NRT)', en: 'Tokyo (NRT)', bn: 'টোকিও (NRT)' },
+  { v: 'Seoul (ICN)', en: 'Seoul (ICN)', bn: 'সিউল (ICN)' },
+  { v: 'Shanghai (PVG)', en: 'Shanghai (PVG)', bn: 'সাংহাই (PVG)' },
+  { v: 'London (LHR)', en: 'London (LHR)', bn: 'লন্ডন (LHR)' },
+  { v: 'Istanbul (IST)', en: 'Istanbul (IST)', bn: 'ইস্তাম্বুল (IST)' },
+  { v: 'Rome (FCO)', en: 'Rome (FCO)', bn: 'রোম (FCO)' },
+  { v: 'Paris (CDG)', en: 'Paris (CDG)', bn: 'প্যারিস (CDG)' },
+  { v: 'Frankfurt (FRA)', en: 'Frankfurt (FRA)', bn: 'ফ্রাঙ্কফুর্ট (FRA)' },
+  { v: 'Amsterdam (AMS)', en: 'Amsterdam (AMS)', bn: 'আমস্টারডাম (AMS)' },
+  { v: 'New York (JFK)', en: 'New York (JFK)', bn: 'নিউ ইয়র্ক (JFK)' },
+  { v: 'Toronto (YYZ)', en: 'Toronto (YYZ)', bn: 'টরন্টো (YYZ)' },
+  { v: "Cox's Bazar (CXB)", en: "Cox's Bazar (CXB)", bn: 'কক্সবাজার (CXB)' },
+  { v: 'Chattogram (CGP)', en: 'Chattogram (CGP)', bn: 'চট্টগ্রাম (CGP)' },
+  { v: 'Sylhet (ZYL)', en: 'Sylhet (ZYL)', bn: 'সিলেট (ZYL)' },
+  { v: 'Jessore (JSR)', en: 'Jessore (JSR)', bn: 'যশোর (JSR)' },
+  { v: 'Rajshahi (RJH)', en: 'Rajshahi (RJH)', bn: 'রাজশাহী (RJH)' },
+  { v: 'Barisal (BZL)', en: 'Barisal (BZL)', bn: 'বরিশাল (BZL)' },
+  { v: 'Saidpur (SPD)', en: 'Saidpur (SPD)', bn: 'সৈয়দপুর (SPD)' },
+  { v: 'other', en: 'Other — type it in', bn: 'অন্য কোনো গন্তব্য — লিখুন' }
+];
+
 const REVIEWS = [
   { n: 'Farhana Islam', c: 'Dhanmondi', en: 'They rebuilt our Cox\u2019s Bazar plan twice because my mother cannot climb stairs. The final invoice matched the quote to the taka.', bn: 'আমার মা সিঁড়ি ভাঙতে পারেন না বলে কক্সবাজারের প্ল্যান দুবার নতুন করে সাজিয়ে দিয়েছে। শেষ ইনভয়েস কোটেশনের সঙ্গে টাকায় টাকায় মিলেছে।' },
   { n: 'Tanvir Ahmed', c: 'Chattogram', en: 'Our Malaysia visa was rejected once before. They redid the file, and the second one came through in nine days.', bn: 'আগে একবার মালয়েশিয়ার ভিসা বাতিল হয়েছিল। ওরা ফাইল নতুন করে সাজিয়ে দেয়, দ্বিতীয়বার নয় দিনেই ভিসা হয়ে যায়।' }
