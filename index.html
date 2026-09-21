@@ -312,6 +312,19 @@
   </section>
 
   <!-- Gallery -->
+  <!-- Completed Tours (shareable trip stories) -->
+  <section id="stories-wrap" class="py-16 bg-white hide">
+    <div class="wrap">
+      <div class="flex flex-wrap items-end justify-between gap-4 mb-7">
+        <div>
+          <h2 class="font-display font-extrabold text-[30px] sm:text-[36px] tracking-tight">Completed tours</h2>
+          <p class="text-[15px] text-[#5C7688] mt-2">Full trip stories, with photos, from groups we've taken recently.</p>
+        </div>
+      </div>
+      <div id="storygrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </div>
+  </section>
+
   <section id="gallery" class="py-16 bg-white border-y border-[#DDE7EC]">
     <div class="wrap">
       <div class="flex flex-wrap items-end justify-between gap-4 mb-7">
@@ -520,6 +533,30 @@
       <div class="grid gap-2.5 mt-6">
         <button onclick="waAirfare()" class="bg-[#1FA855] text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2"><svg class="i i-fill text-[19px]"><use href="#ic-wa"/></svg><span data-i18n="qm.okwa">Also message us now</span></button>
         <button onclick="closeAirfare()" class="text-[#5C7688] font-semibold py-2 text-[13.5px]" data-i18n="qm.okclose">Back to the site</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Completed tour story - shareable via URL hash #story-<id> -->
+<div id="story-modal" class="hide fixed inset-0 z-50 bg-ink/70 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white rounded-[22px] max-w-[760px] w-full mx-auto my-6 overflow-hidden shadow-deep">
+    <div class="bg-sand px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div>
+        <p id="story-title" class="font-display font-bold text-[19px] text-deep"></p>
+        <p id="story-date" class="text-[12.5px] text-[#5C7688] font-semibold mt-0.5"></p>
+      </div>
+      <button onclick="closeStory()" class="w-9 h-9 grid place-items-center rounded-full hover:bg-white/60 shrink-0" aria-label="Close"><svg class="i text-[20px]"><use href="#ic-x"/></svg></button>
+    </div>
+    <div class="p-6">
+      <div id="story-desc" class="text-[14.5px] leading-relaxed text-[#3A5568]"></div>
+      <div id="story-photos" class="grid sm:grid-cols-2 gap-3 mt-5"></div>
+      <div class="mt-6 pt-5 border-t border-[#DDE7EC]">
+        <label class="lbl">Share this trip</label>
+        <div class="flex gap-2">
+          <input id="story-link" readonly class="field flex-1" onclick="this.select()">
+          <button type="button" onclick="copyStoryLink()" class="shrink-0 bg-deep text-white font-semibold text-[13px] px-4 rounded-xl">Copy link</button>
+        </div>
       </div>
     </div>
   </div>

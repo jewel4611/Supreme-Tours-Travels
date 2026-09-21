@@ -2,7 +2,7 @@
    Public website behaviour
    ===================================================================== */
 let tier = '3star', filter = 'all';
-let packages = [], services = [], reviews = [], gallery = [], wishlist = LS.get('wish', []);
+let packages = [], services = [], reviews = [], gallery = [], tourStories = [], wishlist = LS.get('wish', []);
 let addonState = {}, lastQuote = null;
 
 /* ---------------------------------------------------- language + money */
@@ -16,7 +16,7 @@ function setLang(l) {
   document.querySelectorAll('[data-ph]').forEach(el => el.placeholder = t(el.dataset.ph));
   document.querySelectorAll('[data-num]').forEach(el => { el.dataset.raw = el.dataset.raw || el.textContent; el.textContent = num(el.dataset.raw); });
   $('ft-addr').textContent = l === 'bn' ? CONFIG.ADDRESS_BN : CONFIG.ADDRESS_EN;
-  renderPackages(); renderServices(); renderGallery(); renderReviews(); renderAddons(); fillDestSelects(); fillAirfareSelects(); calc();
+  renderPackages(); renderServices(); renderGallery(); renderTourStories(); renderReviews(); renderAddons(); fillDestSelects(); fillAirfareSelects(); calc();
 }
 function setCurrency(c) { APP.currency = c; LS.set('currency', c); renderPackages(); renderAddons(); calc(); }
 
@@ -75,6 +75,50 @@ function renderGallery() {
       ${picture(g.img, g.hue, L(g, 'caption'), 300)}
       <figcaption class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 to-transparent text-white text-[12.5px] font-semibold p-3">${esc(L(g, 'caption'))}</figcaption>
     </figure>`).join('');
+}
+
+function renderTourStories() {
+  const wrap = $('stories-wrap'), grid = $('storygrid');
+  if (!tourStories.length) { wrap.classList.add('hide'); return; }
+  wrap.classList.remove('hide');
+  grid.innerHTML = tourStories.map(s => `
+    <a href="#story-${s.id}" onclick="openStory('${s.id}');return false;" class="group block bg-white rounded-2xl overflow-hidden shadow-lift">
+      <figure class="relative aspect-[4/3] overflow-hidden">
+        ${picture(s.cover_img || (JSON.parse(s.photos || '[]')[0] || ''), 198, L(s, 'title'), 400)}
+      </figure>
+      <div class="p-4">
+        <p class="text-[12px] text-[#5C7688] font-semibold">${s.trip_date ? new Date(s.trip_date).toLocaleDateString(APP.lang === 'bn' ? 'bn-BD' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
+        <h3 class="font-bold text-[15.5px] mt-1 group-hover:text-sea">${esc(L(s, 'title'))}</h3>
+        <span class="text-[12.5px] font-semibold text-sea mt-2 inline-block">Read the full story &rarr;</span>
+      </div>
+    </a>`).join('');
+}
+
+function openStory(id) {
+  const s = tourStories.find(x => x.id === id);
+  if (!s) { closeStory(); return; }
+  if (location.hash !== '#story-' + id) history.pushState(null, '', '#story-' + id);
+  const photos = (() => { try { return JSON.parse(s.photos || '[]'); } catch { return []; } })();
+  $('story-title').textContent = L(s, 'title');
+  $('story-date').textContent = s.trip_date ? new Date(s.trip_date).toLocaleDateString(APP.lang === 'bn' ? 'bn-BD' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  $('story-desc').innerHTML = esc(L(s, 'description')).split(/\n\s*\n/).map(p => `<p class="mb-3">${p.replace(/\n/g, '<br>')}</p>`).join('');
+  $('story-photos').innerHTML = photos.map(p => `<img src="${esc(typeof p === 'string' ? p : p.url)}" class="w-full rounded-xl" loading="lazy">`).join('');
+  $('story-link').value = location.href;
+  $('story-modal').classList.remove('hide');
+  document.body.style.overflow = 'hidden';
+}
+function closeStory() {
+  $('story-modal').classList.add('hide');
+  document.body.style.overflow = '';
+  if (location.hash.startsWith('#story-')) history.pushState(null, '', location.pathname + location.search);
+}
+function openStoryFromHash() {
+  const m = location.hash.match(/^#story-(.+)$/);
+  if (m) openStory(m[1]); else if (!$('story-modal').classList.contains('hide')) closeStory();
+}
+function copyStoryLink() {
+  $('story-link').select();
+  navigator.clipboard?.writeText($('story-link').value).then(() => toast('Link copied')).catch(() => document.execCommand('copy'));
 }
 
 function renderReviews() {
@@ -524,6 +568,7 @@ async function submitLead(e) {
   services = await DB.list('services', SEED_SERVICES);
   reviews = await DB.list('reviews', SEED_REVIEWS);
   gallery = await DB.list('gallery', SEED_GALLERY);
+  tourStories = await DB.list('tour_stories', []);
 
   document.querySelectorAll('.flt').forEach(b => b.onclick = () => {
     filter = b.dataset.f;
@@ -540,8 +585,12 @@ async function submitLead(e) {
 
   fillDestSelects(); renderAddons(); setLang(LS.get('lang', 'en'));
   $('c-dest').addEventListener('change', () => { renderAddons(); calc(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeQuote(); closeItinerary(); closeAirfare(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeQuote(); closeItinerary(); closeAirfare(); closeStory(); } });
   $('quote-modal').addEventListener('click', e => { if (e.target.id === 'quote-modal') closeQuote(); });
   $('itin-modal').addEventListener('click', e => { if (e.target.id === 'itin-modal') closeItinerary(); });
   $('af-modal').addEventListener('click', e => { if (e.target.id === 'af-modal') closeAirfare(); });
+  $('story-modal').addEventListener('click', e => { if (e.target.id === 'story-modal') closeStory(); });
+
+  window.addEventListener('hashchange', openStoryFromHash);
+  openStoryFromHash();
 })();

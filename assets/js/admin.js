@@ -8,11 +8,12 @@ const TABS = [
   { id: 'vendors', name: 'Vendors' }, { id: 'signatories', name: 'Signatories' },
   { id: 'packages', name: 'Packages' }, { id: 'services', name: 'Services' },
   { id: 'reviews', name: 'Reviews' },
+  { id: 'stories', name: 'Completed Tours' },
   { id: 'gallery', name: 'Photos' }, { id: 'staff', name: 'Staff accounts' },
   { id: 'setup', name: 'Setup' }
 ];
 const ADMIN_ONLY_TABS = ['siteinfo', 'invoices', 'ledger', 'vendors', 'signatories', 'staff', 'setup'];
-const S = { quotations: [], airfare_requests: [], invoices: [], payments: [], customers: [], vendors: [], vendorLedger: [], signatories: [], staffProfiles: [], packages: [], services: [], reviews: [], gallery: [] };
+const S = { quotations: [], airfare_requests: [], invoices: [], payments: [], customers: [], vendors: [], vendorLedger: [], signatories: [], staffProfiles: [], packages: [], services: [], reviews: [], tourStories: [], gallery: [] };
 let tab = 'dash', custSearch = '', promoPicked = [], ledgerMode = 'customer', currentRole = 'admin';
 
 const STATUS = {
@@ -91,6 +92,7 @@ async function reload() {
   S.packages = await DB.list('packages', SEED_PACKAGES);
   S.services = await DB.list('services', SEED_SERVICES);
   S.reviews = await DB.list('reviews', SEED_REVIEWS);
+  S.tourStories = await DB.list('tour_stories', []);
   S.gallery = await DB.list('gallery', SEED_GALLERY);
 }
 function go(id) {
@@ -102,7 +104,7 @@ function go(id) {
   });
   ({ dash: viewDash, siteinfo: viewSiteInfo, quotations: viewQuotations, airfare: viewAirfare, invoices: viewInvoices,
      ledger: viewLedger, customers: viewCustomers, vendors: viewVendors, signatories: viewSignatories,
-     packages: viewPackages, services: viewServices, reviews: viewReviews, gallery: viewGallery, staff: viewStaff, setup: viewSetup })[id]();
+     packages: viewPackages, services: viewServices, reviews: viewReviews, stories: viewStories, gallery: viewGallery, staff: viewStaff, setup: viewSetup })[id]();
 }
 const head = (title, sub, actions = '') => `
   <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
@@ -801,6 +803,30 @@ function viewReviews() {
           <button onclick="del('reviews','${r.id}')" class="p-2.5 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[17px]')}</button>
         </div></div>`).join('')}</div>`;
 }
+function viewStories() {
+  $('pane').innerHTML = head('Completed Tours', 'Full trip write-ups with photos - each gets its own shareable link', btnPrimary('Add a completed tour', 'editTourStory()')) +
+    `<div class="grid sm:grid-cols-2 gap-4">${S.tourStories.map(s => {
+      const photos = (() => { try { return JSON.parse(s.photos || '[]'); } catch { return []; } })();
+      const cover = s.cover_img || photos[0]?.url || photos[0] || '';
+      const link = location.origin + location.pathname.replace(/admin\.html$/, '') + '#story-' + s.id;
+      return `
+      <div class="bg-white rounded-2xl p-4 shadow-lift flex gap-3">
+        ${cover ? `<img src="${esc(cover)}" class="w-20 h-20 rounded-xl object-cover shrink-0">` : `<div class="w-20 h-20 rounded-xl bg-paper shrink-0 grid place-items-center">${icon('ic-img', 'text-[22px] text-[#A9B7C2]')}</div>`}
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-[14.5px] truncate">${esc(s.title_en || '(untitled)')}</p>
+          <p class="text-[12px] text-[#5C7688]">${s.trip_date || ''} · ${photos.length} photo${photos.length === 1 ? '' : 's'}</p>
+          <div class="flex items-center gap-1 mt-2">
+            <input readonly value="${esc(link)}" onclick="this.select()" class="field field-sm flex-1 !text-[11.5px]">
+            <button type="button" onclick="navigator.clipboard.writeText('${esc(link)}');toast('Link copied')" class="shrink-0 text-sea text-[12px] font-semibold px-2">Copy</button>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1 shrink-0">
+          <button onclick="editTourStory('${s.id}')" class="p-2.5 rounded-lg hover:bg-paper text-sea">${icon('ic-edit', 'text-[17px]')}</button>
+          <button onclick="del('tour_stories','${s.id}')" class="p-2.5 rounded-lg hover:bg-paper text-[#B4361F]">${icon('ic-trash', 'text-[17px]')}</button>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+}
 function viewGallery() {
   $('pane').innerHTML = head('Photos', ONLINE() ? 'Uploaded to Supabase Storage' : 'Demo mode keeps photos in this browser only', btnPrimary('Add photo', 'editPhoto()')) +
     `<div class="grid grid-cols-2 md:grid-cols-4 gap-4">${S.gallery.map(g => `
@@ -821,6 +847,7 @@ const ICONS = ['ic-plane', 'ic-passport', 'ic-bed', 'ic-shield', 'ic-headset', '
 function fieldHTML(f) {
   if (f.type === 'hr') return `<hr class="border-[#E2EAEF] my-1">`;
   if (f.type === 'items') return `<div><label class="lbl">${f.label}</label><div id="ed-items"></div></div>`;
+  if (f.type === 'photos') return `<div class="sm:col-span-2"><label class="lbl">${f.label}</label><div id="ed-photos"></div></div>`;
   if (f.type === 'textarea') return `<div><label class="lbl">${f.label}</label><textarea name="${f.k}" rows="${f.rows || 2}" class="field" ${f.ph ? `placeholder="${esc(f.ph)}"` : ''}>${esc(f.v || '')}</textarea></div>`;
   if (f.type === 'select') return `<div><label class="lbl">${f.label}</label><select name="${f.k}" class="field">${f.opts.map(o => `<option value="${o[0]}" ${String(f.v) === String(o[0]) ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></div>`;
   if (f.type === 'image') return `<div><label class="lbl">${f.label}</label>
@@ -841,6 +868,7 @@ function openEditor(title, fields, onsave, startItems) {
     <div class="flex gap-2 pt-1"><button class="flex-1 bg-deep text-white font-bold py-3 rounded-xl">Save</button>
     <button type="button" onclick="closeEditor()" class="px-5 border-[1.5px] border-[#D7E2E9] rounded-xl font-semibold">Cancel</button></div>`;
   if ($('ed-items')) paintItems();
+  if ($('ed-photos')) paintPhotoItems();
   $('editor').classList.remove('hide');
 }
 function closeEditor() { $('editor').classList.add('hide'); edSave = null; }
@@ -865,6 +893,25 @@ async function uploadInto(input, key) {
   if (!ONLINE() && f.size > 400000) { toast('Demo mode: choose an image under 400 KB'); return; }
   toast('Uploading…');
   try { const url = await DB.upload(f); $('ed-form').querySelector(`[name="${key}"]`).value = url; toast('Photo ready'); }
+  catch (e) { toast('Upload failed: ' + e.message); }
+}
+function paintPhotoItems() {
+  const box = $('ed-photos'); if (!box) return;
+  box.innerHTML = edItems.map((it, i) => `
+    <div class="flex gap-2 mb-2 items-center">
+      ${it.url ? `<img src="${esc(it.url)}" class="w-14 h-14 rounded-lg object-cover shrink-0">` : `<div class="w-14 h-14 rounded-lg bg-paper shrink-0 grid place-items-center">${icon('ic-img', 'text-[18px] text-[#A9B7C2]')}</div>`}
+      <input value="${esc(it.url || '')}" oninput="edItems[${i}].url=this.value" placeholder="https://… or upload" class="field field-sm flex-1">
+      <label class="shrink-0 bg-paper border-[1.5px] border-[#D7E2E9] rounded-xl px-3 py-2.5 cursor-pointer text-[12.5px] font-semibold">
+        Upload<input type="file" accept="image/*" class="hidden" onchange="uploadIntoPhotoSlot(this,${i})"></label>
+      <button type="button" onclick="edItems.splice(${i},1);paintPhotoItems()" class="px-2 text-[#B4361F]">${icon('ic-trash', 'text-[16px]')}</button>
+    </div>`).join('') + `
+    <button type="button" onclick="edItems.push({url:''});paintPhotoItems()" class="text-[13px] font-semibold text-sea flex items-center gap-1 mt-1">${icon('ic-plus', 'text-[15px]')}Add a photo</button>`;
+}
+async function uploadIntoPhotoSlot(input, i) {
+  const f = input.files[0]; if (!f) return;
+  if (!ONLINE() && f.size > 400000) { toast('Demo mode: choose an image under 400 KB'); return; }
+  toast('Uploading…');
+  try { edItems[i].url = await DB.upload(f); paintPhotoItems(); toast('Photo ready'); }
   catch (e) { toast('Upload failed: ' + e.message); }
 }
 async function saveEditor(e) {
@@ -1013,6 +1060,23 @@ function editReview(id) {
     await DB.save('reviews', { ...r, ...d, id: r.id || 'rev' + Date.now(), created_at: r.created_at || new Date().toISOString() });
     await reload(); viewReviews(); toast('Review saved');
   });
+}
+function editTourStory(id) {
+  const s = S.tourStories.find(x => x.id === id) || {};
+  const startPhotos = (() => { try { return JSON.parse(s.photos || '[]').map(p => ({ url: typeof p === 'string' ? p : p.url })); } catch { return []; } })();
+  openEditor(id ? 'Edit completed tour' : 'Add a completed tour', [
+    { k: 'title_en', label: 'Title (English)', v: s.title_en, req: true, half: true },
+    { k: 'title_bn', label: 'শিরোনাম (বাংলা)', v: s.title_bn, half: true },
+    { k: 'trip_date', label: 'Trip date', v: s.trip_date, type: 'date', half: true },
+    { k: 'cover_img', label: 'Cover photo', v: s.cover_img, type: 'image', hint: 'Leave empty to use the first trip photo below.', half: true },
+    { k: 'description_en', label: 'Story (English)', v: s.description_en, type: 'textarea', rows: 5, req: true },
+    { k: 'description_bn', label: 'গল্প (বাংলা)', v: s.description_bn, type: 'textarea', rows: 5 },
+    { k: 'photos', label: 'Trip Photos', type: 'photos' }
+  ], async d => {
+    const photos = JSON.stringify(edItems.filter(i => i.url && i.url.trim()));
+    await DB.save('tour_stories', { ...s, ...d, photos, id: s.id || 'story' + Date.now(), created_at: s.created_at || new Date().toISOString() });
+    await reload(); viewStories(); toast('Completed tour saved');
+  }, startPhotos);
 }
 function editPhoto(id) {
   const g = S.gallery.find(x => x.id === id) || { hue: 198 };

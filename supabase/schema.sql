@@ -45,6 +45,18 @@ create table if not exists reviews (
   review_bn   text
 );
 
+create table if not exists tour_stories (
+  id            text primary key,
+  created_at    timestamptz default now(),
+  title_en      text,
+  title_bn      text,
+  trip_date     date,
+  description_en text,
+  description_bn text,
+  cover_img     text,
+  photos        jsonb default '[]'::jsonb
+);
+
 create table if not exists gallery (
   id          text primary key,
   created_at  timestamptz default now(),
@@ -236,6 +248,7 @@ create table if not exists settings (
 alter table packages   enable row level security;
 alter table services   enable row level security;
 alter table reviews    enable row level security;
+alter table tour_stories enable row level security;
 alter table gallery    enable row level security;
 alter table customers  enable row level security;
 alter table quotations enable row level security;
@@ -251,19 +264,23 @@ alter table staff_profiles enable row level security;
 drop policy if exists "public read packages" on packages;
 drop policy if exists "public read services" on services;
 drop policy if exists "public read reviews"  on reviews;
+drop policy if exists "public read tour_stories" on tour_stories;
 drop policy if exists "public read gallery"  on gallery;
 create policy "public read packages" on packages for select using (true);
 create policy "public read services" on services for select using (true);
 create policy "public read reviews"  on reviews  for select using (true);
+create policy "public read tour_stories" on tour_stories for select using (true);
 create policy "public read gallery"  on gallery  for select using (true);
 
 drop policy if exists "staff write packages" on packages;
 drop policy if exists "staff write services" on services;
 drop policy if exists "staff write reviews"  on reviews;
+drop policy if exists "staff write tour_stories" on tour_stories;
 drop policy if exists "staff write gallery"  on gallery;
 create policy "staff write packages" on packages for all to authenticated using (true) with check (true);
 create policy "staff write services" on services for all to authenticated using (true) with check (true);
 create policy "staff write reviews"  on reviews  for all to authenticated using (true) with check (true);
+create policy "staff write tour_stories" on tour_stories for all to authenticated using (true) with check (true);
 create policy "staff write gallery"  on gallery  for all to authenticated using (true) with check (true);
 
 -- A visitor may create a quotation and their own customer row, nothing else.
